@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Type, Optional
+from typing import Any, Type, Optional, Union
 from pydantic import BaseModel
 from typing_extensions import get_origin, get_args
 
@@ -29,32 +29,48 @@ def get_field_meta_data(field_info: Any, parent_name: str, field_path: str) -> F
     Returns:
         FieldMetaData: Structured information about the field's type.
     """
+    # Extract the base type from Optional fields
     field_type = field_info.annotation
     origin = get_origin(field_type)
     args = get_args(field_type)
-
+    
+    # Handle Optional types (which are represented as Union[Type, None])
+    if origin is Union and type(None) in args:
+        field_type = next(arg for arg in args if arg is not type(None))
+        # Re-analyze the extracted type
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+    
     # Determine if the field is a collection (list, set, tuple)
     is_collection = origin in (list, set, tuple)
-    model_type = args[0] if is_collection and args else None
-
+    
+    # Extract model_type from collections
+    model_type = None
+    if is_collection and args:
+        model_type = args[0]
+    
     # Determine if the field is a Pydantic model
     is_model = isinstance(field_type, type) and issubclass(field_type, BaseModel)
-
+    
     # Determine if the field is a collection of Pydantic models
-    is_collection_of_models = (is_collection and
-                               model_type and
-                               issubclass(model_type, BaseModel))
-
+    is_collection_of_models = (
+        is_collection and 
+        model_type is not None and 
+        isinstance(model_type, type) and 
+        issubclass(model_type, BaseModel)
+    )
+    
+    # If the field itself is a model, set model_type to field_type
     if is_model:
         model_type = field_type
-
+    
     # Determine if the field is required
     is_required = field_info.is_required()
-
-    return FieldMetaData(is_model=is_model,
-                         is_collection_of_models=is_collection_of_models,
-                         is_required=is_required,
-                         field_type=field_type,
-                         model_type=model_type,
-                         parent_name=parent_name,
+    
+    return FieldMetaData(is_model=is_model, 
+                         is_collection_of_models=is_collection_of_models, 
+                         is_required=is_required, 
+                         field_type=field_type, 
+                         model_type=model_type, 
+                         parent_name=parent_name, 
                          field_path=field_path)
