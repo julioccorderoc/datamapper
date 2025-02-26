@@ -15,18 +15,19 @@
 
 - [ ] Tests for the 5 main use cases:
 
-  - Simple field matching
-  - Nested field matching
-  - Build new models from scattered fields
-  - List of models with same instance
-  - List of models with different instance
+  - [ ] Simple field matching
+  - [ ] Nested field matching
+  - [ ] Build new models from scattered fields
+  - [ ] List of models with same instance
+  - [ ] List of models with different instance
 
 - [ ] Tests for the error handling:
 
-  - Field in the target not found in the source
-  - Field found but with different type
+  - [ ] Field in the target not found in the source
+  - [ ] Field found but with different type
   - 
 
+- [ ] Test for returns with partial fields
 - [ ] 
 
 ## IMPROVEMENTS
@@ -48,6 +49,7 @@
   - Another solution could be to always match a nested model if it has the same name as the model being built.
   - 
 - [ ] Currently, when returning a partial model, this is not serializable. Fix it so it always does.
+- [ ] Fix the log of the display method for the error manager: currently it's using a print
 
 ## REFACTORING
 
