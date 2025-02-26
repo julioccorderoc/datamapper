@@ -24,16 +24,24 @@ class ModelMapper:
         self._target_name: str = ""
         self._max_iteration_to_build_list_of_models = 100  # Safety limit for list processing
     
+    def _start(self, 
+               source: BaseModel, 
+               target: Type[BaseModel]) -> None:
+        """Starts the mapper"""
+        self._field_cache.clear()
+        self._error_manager.clear()
+        self._path_manager.clear()
+        self._path_manager = DynamicPathManager("source", "target")
+        target.model_rebuild() # TODO: protect from errors
+        self._source_name = source.__class__.__name__
+        self._target_name = target.__name__
+
 
     def map_models(self, 
                    source: BaseModel, 
                    target: Type[BaseModel]) -> Union[BaseModel, Dict[str, Any]]:
         """Maps source model instance to target model type"""
-        target.model_rebuild() # TODO: protect from errors
-        self._source_name = source.__class__.__name__
-        self._target_name = target.__name__
-        self._field_cache.clear()
-        self._path_manager = DynamicPathManager("source", "target")
+        self._start(source, target)
         self.logger.debug(f"🚀 Starting mapping from {self._source_name} to {self._target_name}")
         
         try:
@@ -262,7 +270,7 @@ class ModelMapper:
 
         if hasattr(current, part) and getattr(current, part) is not None: # TODO: try block to avoid unexpected exceptions
             with self._path_manager.track_segment("source", part):
-                print(f"###### PARENT NAME ###### {field_meta_data.parent_name}")
+                # print(f"###### PARENT NAME ###### {field_meta_data.parent_name}")
                 source_path = self._path_manager.get_path("source")
                 if not self._field_cache.is_cached(source_path):
                     self.logger.debug(f"🔍 Source field: '{source_path}' matched with target field: '{target_path}'")

@@ -129,3 +129,9 @@ class DynamicPathManager:
             list[str]: List of path type identifiers
         """
         return list(self._path_registry.keys())
+    
+    def clear(self) -> None:
+        """
+        Clears all path types and their associated segments.
+        """
+        self._path_registry.clear()

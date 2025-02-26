@@ -74,4 +74,8 @@ class ErrorHandler:
                 print(f"  - Target field: {error.field_path}\n"
                       f"    Error type: {error.error_type.name}\n"
                       f"    Error details: {error.details}")
+    
+    def clear(self) -> None:
+        """Clears the mapping error list"""
+        self.mapping_errors = []
 
