@@ -9,17 +9,18 @@
 - [ ] Support the list of models in the root of the source model: when the source model is a list in it's root.
 - [ ] Support for multiple aliases: handle the case where the target model could support multiple aliases.
 - [ ] Use the map_model function without class instanciation: is it possible to avoid the class instanciation?
-- [ ] 
+- [ ] Add option to return a fully serializable dict as a result from the partial returns, instead of a dict of objects.
 
 ## TESTS
 
 - [ ] Tests for the 5 main use cases:
 
-  - [ ] Simple field matching
-  - [ ] Nested field matching
+  - [x] Simple field matching
+  - [x] Nested field matching
   - [ ] Build new models from scattered fields
   - [ ] List of models with same instance
-  - [ ] List of models with different instance
+  - [ ] List of new models
+  - [ ] List of models in root
 
 - [ ] Tests for the error handling:
 
@@ -28,7 +29,8 @@
   - 
 
 - [ ] Test for returns with partial fields
-- [ ] 
+- [ ] Test for aliases
+- [ ] Test for non required fields
 
 ## IMPROVEMENTS
 
