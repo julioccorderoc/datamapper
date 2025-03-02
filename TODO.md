@@ -24,13 +24,17 @@
 
 - [ ] Tests for the error handling:
 
-  - [ ] Field in the target not found in the source
-  - [ ] Field found but with different type
-  - 
+  - [ ] Required field in the target not found in the source
+  - [ ] Non required field in the target not found in the source
+  - [ ] Field found with different type that can be coerced
+  - [ ] Field found with different type that can't be coerced
+  - [ ] Empty new model
+  - [ ] No mapa mapped
 
 - [ ] Test for returns with partial fields
 - [ ] Test for aliases
 - [ ] Test for non required fields
+- [ ] Test for
 
 ## IMPROVEMENTS
 
@@ -40,23 +44,25 @@
 - [ ] Add support for a log file using the env variable LOG_FILE
 - [ ] Add support for a log level using the env variable LOG_LEVEL
 - [ ] Add cache and logging for the lists of models
-- [ ] Not just validate if the source model has the field, but also if the field is not null
+- [x] Not just validate if the source model has the field, but also if the field is not null
+- [ ] Add counter and summary for the types of errors in the list of errors
 
 ## BUGS
 
 - [ ] Corrupted models:
-  - When building a new model (usually a list of models), it's possible that the field name is repeated in different nested models. 
+
+  - When building a new model (usually a list of models), it's possible that the field name is repeated in different nested models.
   - This can cause to build a unexpected models.
-  - The solution could be to gather the data from the same level, instead of looking through the whole source model again. 
+  - The solution could be to gather the data from the same level, instead of looking through the whole source model again.
   - Another solution could be to always match a nested model if it has the same name as the model being built.
-  - 
+
 - [ ] Currently, when returning a partial model, this is not serializable. Fix it so it always does.
 - [ ] Fix the log of the display method for the error manager: currently it's using a print
 
 ## REFACTORING
 
-- [ ] Move the field matching logic to a separate module: 
-
+- [ ] Move the field matching logic to a separate module
+- [ ] Move the error handling logic to a separate module
 
 ## MINOR
 
@@ -68,3 +74,4 @@
 - [ ] Would be better to have source and target models as arguments to the class?
 - [ ] Would be better to "flat" the source model before matching?
 - [ ] Would be better to "flat" the target model before building?
+- [ ] Would be better to return a pure dict instead of a dict of pydantic models for the partial return?
