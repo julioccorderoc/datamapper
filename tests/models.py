@@ -126,6 +126,14 @@ class SimpleAddressTarget(BaseModel):
     country: str
 
 
+class PartialSimpleMatchAddress(BaseModel):
+    city: str
+    state: str
+    zip_code: str
+    country: str
+    non_existent_field: str
+
+
 # Target model for nested field match
 class MetaUserTarget(BaseModel):
     username: str
@@ -140,6 +148,12 @@ class NestedAddressTarget(BaseModel):
     address_line_1: str
     address_line_2: str
     meta_address: Optional[SimpleAddressTarget]
+
+
+class PartialNewModelNestedAddress(BaseModel):
+    address_line_1: str
+    address_line_2: str
+    meta_address: Optional[PartialSimpleMatchAddress]
 
 
 # Target model for field not found error
@@ -158,70 +172,12 @@ class TypeErrorAddress(BaseModel):
     country: str
 
 
-# Target model for nested model creation
-class Nested(BaseModel):
-    field1: str
-    field2: int
+class PartialScattered(BaseModel):
+    extra_item_name: str
+    extra_item_price: float
+    non_existent_field: bool
 
 
-class NestedTarget(BaseModel):
-    nested: Nested
-
-
-# Target models for list handling
-class Item(BaseModel):
-    name: str
-    value: int
-
-
-class ListTarget(BaseModel):
-    items: List[Item]
-
-
-class NewItem(BaseModel):
-    item_name: str
-    item_value: int
-
-
-class NewListTarget(BaseModel):
-    new_items: List[NewItem]
-
-
-class RootListTarget(BaseModel):
-    root_list: List[str]
-
-
-# Target model for error cases
-class ErrorTarget(BaseModel):
-    missing_field: str
-    wrong_type: int
-
-
-# Target models for partial return tests
-class PartialSimpleTarget(BaseModel):
-    found_field: str
-    missing_field: str
-
-
-class PartialNested(BaseModel):
-    field: str
-
-
-class PartialNestedTarget(BaseModel):
-    nested: PartialNested
-    missing: str
-
-
-class PartialListTarget(BaseModel):
-    items: List[Item]
-    missing: str
-
-
-class PartialNewListTarget(BaseModel):
-    new_items: List[NewItem]
-    missing: str
-
-
-class PartialRootListTarget(BaseModel):
-    root_list: List[str]
-    missing: str
+class PartialListNewCartInfo(BaseModel):
+    products: List[Product]  # direct match
+    scattered: Optional[List[PartialScattered]]  # list of models with scattered data

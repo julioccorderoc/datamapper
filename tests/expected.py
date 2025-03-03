@@ -5,10 +5,7 @@ promotion2 = Promotion(promotion_id=202, promotion_name="New Customer", discount
 
 payment_info = PaymentInfo(
     payment_method="Credit Card",
-    promotions=[
-        promotion1,
-        promotion2
-    ],
+    promotions=[promotion1, promotion2],
     taxes=Taxes(tax=7.50),
     total=107.50,
 )
@@ -16,10 +13,7 @@ payment_info = PaymentInfo(
 scattered1 = Scattered(extra_item_name="Gift Wrap", extra_item_price=5.0)
 scattered2 = Scattered(extra_item_name="Rush Delivery", extra_item_price=10.0)
 
-scattered_items = [
-    scattered1,
-    scattered2
-]
+scattered_items = [scattered1, scattered2]
 
 # Mock Customizations
 customization1 = Customization(customization_id=1, customization_name="Color: Red")
@@ -42,10 +36,7 @@ product2 = Product(
 )
 
 cart_info = CartInfo(
-    products=[
-        product1,
-        product2
-    ],
+    products=[product1, product2],
     scattered=scattered_items,
 )
 
@@ -75,72 +66,49 @@ expected_simple_target = SimpleAddressTarget(
     country="USA",
 )
 
+expected_simple_target_partial = {
+    "city": "Springfield",
+    "state": "IL",
+    "zip_code": "62704",
+    "country": "USA",
+}
+
 # Expected model from nested filed match
 expected_nested_target = MetaUserTarget(
     username="johndoe",
     email="john.doe@example.com",
     education="Bachelor of Science",
-    city = "Springfield",
-    state = "IL",
+    city="Springfield",
+    state="IL",
 )
+
+expected_partial_nested_target = {
+    "username": "johndoe",
+    "email": "john.doe@example.com",
+    "education": "Bachelor of Science",
+    "city": "Springfield",
+    "state": "IL",
+}
 
 # Expected model from new model building
 expected_new_model = NestedAddressTarget(
     address_line_1="123 Main St",
     address_line_2="Apt 4B",
-    meta_address = expected_simple_target,
+    meta_address=expected_simple_target,
 )
 
-class ExpectedNestedTarget(BaseModel):
-    pass #nested: ExpectedNested = ExpectedNested()
-
-# Expected models from list handling
-class ExpectedItem(BaseModel):
-    name: str
-    value: int
-
-class ExpectedListTarget(BaseModel):
-    items: List[ExpectedItem] = [
-        ExpectedItem(name="item1", value=1),
-        ExpectedItem(name="item2", value=2)
-    ]
-
-class ExpectedNewItem(BaseModel):
-    item_name: str
-    item_value: int
-
-class ExpectedNewListTarget(BaseModel):
-    new_items: List[ExpectedNewItem] = [
-        ExpectedNewItem(item_name="item1", item_value=1),
-        ExpectedNewItem(item_name="item2", item_value=2)
-    ]
-
-class ExpectedRootListTarget(BaseModel):
-    root_list: List[str] = ["a", "b", "c"]
-
-# Expected partial returns (as dictionaries)
-expected_partial_simple = {
-    "found_field": "value"
+expected_new_model_partial = {
+    "address_line_1": "123 Main St",
+    "address_line_2": "Apt 4B",
+    "meta_address": expected_simple_target_partial,
 }
 
-expected_partial_nested = {
-    "nested": {
-        "field": "value"
-    }
-}
+scattered_partial = [
+    {"extra_item_name": "Gift Wrap", "extra_item_price": 5.0},
+    {"extra_item_name": "Rush Delivery", "extra_item_price": 10.0},
+]
 
-expected_partial_list_existing = {
-    "items": [
-        {"name": "item1"}
-    ]
-}
-
-expected_partial_list_new = {
-    "new_items": [
-        {"name": "item1"}
-    ]
-}
-
-expected_partial_list_root = {
-    "root_list": ["a", "b"]
+expected_list_new_partial = {
+    "products": [product1, product2],
+    "scattered": scattered_partial,
 }

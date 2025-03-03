@@ -48,8 +48,12 @@ address = Address(
 )
 
 # Mock Checkout Items
-checkout1 = Checkout(extra_item_id=301, extra_item_name="Gift Wrap", extra_item_price=5.0)
-checkout2 = Checkout(extra_item_id=302, extra_item_name="Rush Delivery", extra_item_price=10.0)
+checkout1 = Checkout(
+    extra_item_id=301, extra_item_name="Gift Wrap", extra_item_price=5.0
+)
+checkout2 = Checkout(
+    extra_item_id=302, extra_item_name="Rush Delivery", extra_item_price=10.0
+)
 
 # Mock Webhook
 webhook = Webhook(webhook_id=401, webhook_name="OrderCreated")
@@ -83,62 +87,19 @@ source_data = SourceModelOrder(
 # All other cases
 # ---------------------------------------------------
 
+
 # Source model for simple field mapping
 class SimpleSource(BaseModel):
     simple_field: str
     nested: dict = {"nested_field": "nested_value"}
 
+
 simple_source = Address(
-    address_name = "Address_name",
-    address_line_1 = "Address_line_1",
-    address_line_2 = "Address_line_2",
-    city = "City",
-    state = "State",
-    zip_code = "Zip_code",
-    country = "Country",
+    address_name="Address_name",
+    address_line_1="Address_line_1",
+    address_line_2="Address_line_2",
+    city="City",
+    state="State",
+    zip_code="Zip_code",
+    country="Country",
 )
-
-# Source model for nested model creation
-class ScatteredSource(BaseModel):
-    field1: str = "value1"
-    field2: int = 42
-    unrelated: str = "ignore"
-
-# Source models for list handling
-class Item(BaseModel):
-    name: str
-    value: int
-
-class ListSource(BaseModel):
-    items: List[Item] = [
-        Item(name="item1", value=1),
-        Item(name="item2", value=2)
-    ]
-    root_list: List[str] = ["a", "b", "c"]
-
-# Source model for error cases
-class ErrorSource(BaseModel):
-    existing_field: str = "value"
-    wrong_type: str = "not_an_int"
-
-# Source models for partial return tests
-class PartialSimpleSource(BaseModel):
-    found_field: str = "value"
-
-class PartialNestedSource(BaseModel):
-    data: dict = {"field": "value"}
-
-class PartialListItem(BaseModel):
-    name: str = "item1"
-
-class PartialListSource(BaseModel):
-    items: List[PartialListItem] = [PartialListItem()]
-
-class PartialSourceItem(BaseModel):
-    old_name: str = "item1"
-
-class PartialNewListSource(BaseModel):
-    items: List[PartialSourceItem] = [PartialSourceItem()]
-
-class PartialRootListSource(BaseModel):
-    root_list: List[str] = ["a", "b"]

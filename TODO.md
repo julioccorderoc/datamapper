@@ -13,36 +13,35 @@
 
 ## TESTS
 
-- [ ] Tests for the 5 main use cases:
+- [x] Tests for the 5 main use cases:
 
   - [x] Simple field matching
   - [x] Nested field matching
-  - [ ] Build new models from scattered fields
-  - [ ] List of models with same instance
-  - [ ] List of new models
-  - [ ] List of models in root
+  - [x] Build new models from scattered fields
+  - [x] List of models with same instance
+  - [x] List of new models
+  - [x] List of models in root
 
 - [ ] Tests for the error handling:
 
-  - [ ] Required field in the target not found in the source
+  - [x] Required field in the target not found in the source
   - [ ] Non required field in the target not found in the source
   - [ ] Field found with different type that can be coerced
-  - [ ] Field found with different type that can't be coerced
+  - [x] Field found with different type that can't be coerced
   - [ ] Empty new model
   - [ ] No mapa mapped
 
-- [ ] Test for returns with partial fields
+- [x] Test for returns with partial fields
 - [ ] Test for aliases
 - [ ] Test for non required fields
-- [ ] Test for
 
 ## IMPROVEMENTS
 
 - [ ] Move the "name" level from the logger in the error_manager module to where the error is raised
 - [ ] Add to the log the number of models found in the lists of models
 - [ ] Add more support for Union, Set, Tuple, and Dict types
-- [ ] Add support for a log file using the env variable LOG_FILE
-- [ ] Add support for a log level using the env variable LOG_LEVEL
+- [x] Add support for a log file using the env variable LOG_FILE
+- [x] Add support for a log level using the env variable LOG_LEVEL
 - [ ] Add cache and logging for the lists of models
 - [x] Not just validate if the source model has the field, but also if the field is not null
 - [ ] Add counter and summary for the types of errors in the list of errors
@@ -56,19 +55,19 @@
   - The solution could be to gather the data from the same level, instead of looking through the whole source model again.
   - Another solution could be to always match a nested model if it has the same name as the model being built.
 
-- [ ] Currently, when returning a partial model, this is not serializable. Fix it so it always does.
+- [x] Currently, when returning a partial model, this is not serializable. Fix it so it always does. || They're not serializable due to the use of pydantic models within the dict. For them to be serializable, a special function has to be used as the default in the json.dumps function. Maybe, it could be useful to have an option to return the partial data as just serialable dicts.
 - [ ] Fix the log of the display method for the error manager: currently it's using a print
 
 ## REFACTORING
 
 - [ ] Move the field matching logic to a separate module
-- [ ] Move the error handling logic to a separate module
+- [x] Move the error handling logic to a separate module
 
 ## MINOR
 
 - [ ] Model validation before starting the mapping
 - [ ] Add more mapping error cases
-- [ ] Improve the error messages
+- [x] Improve the error messages
 - [ ] Improve error handling for "dependencies" like DynamicPathManager, etc...
 - [ ] Improve Single Responsibility Principle with the traverse function
 - [ ] Would be better to have source and target models as arguments to the class?

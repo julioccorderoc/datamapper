@@ -3,44 +3,30 @@ import pytest
 from pymapper.pymapper import PyMapper
 from pymapper.src.error_manager import ErrorType
 
-from .sources import (
-    source_data,
-    address,
-    PartialSimpleSource,
-    PartialNestedSource,
-    PartialListSource,
-    PartialNewListSource,
-    PartialRootListSource,
-)
+from .sources import source_data, address
 
 from .models import (
     TargetModelOrder,
+    PaymentInfo,
+    CartInfo,
     SimpleAddressTarget,
     MetaUserTarget,
     NestedAddressTarget,
-    PaymentInfo,
-    CartInfo,
     TypeErrorAddress,
-    MissingFieldAddress,  #
-    PartialSimpleTarget,
-    PartialNestedTarget,
-    PartialListTarget,
-    PartialNewListTarget,
-    PartialRootListTarget,
+    MissingFieldAddress,
+    PartialNewModelNestedAddress,
+    PartialListNewCartInfo,
 )
 
 from .expected import (
     expected_target,
+    payment_info,
+    cart_info,
     expected_simple_target,
     expected_nested_target,
     expected_new_model,
-    payment_info,
-    cart_info,  #
-    expected_partial_simple,
-    expected_partial_nested,
-    expected_partial_list_existing,
-    expected_partial_list_new,
-    expected_partial_list_root,
+    expected_new_model_partial,
+    expected_list_new_partial,
 )
 
 # Add to the test a type checking
@@ -132,6 +118,10 @@ class TestErrorCases:
     #     """Tests handling when a new model is empty."""
     #     mapper = PyMapper()
 
+    # def test_no_mappable_data(self):
+    #     """Tests handling when no mappable data is found."""
+    #     mapper = PyMapper()
+
 
 class TestPartialReturns:
     """Tests for partial return scenarios."""
@@ -139,11 +129,8 @@ class TestPartialReturns:
     @pytest.mark.parametrize(
         "source,target,expected",
         [
-            (PartialSimpleSource(), PartialSimpleTarget, expected_partial_simple),
-            (PartialNestedSource(), PartialNestedTarget, expected_partial_nested),
-            (PartialListSource(), PartialListTarget, expected_partial_list_existing),
-            (PartialNewListSource(), PartialNewListTarget, expected_partial_list_new),
-            # (PartialRootListSource(), PartialRootListTarget, expected_partial_list_root)
+            (address, PartialNewModelNestedAddress, expected_new_model_partial),
+            (source_data, PartialListNewCartInfo, expected_list_new_partial),
         ],
     )
     def test_partial_returns(self, source, target, expected):
@@ -159,8 +146,3 @@ class TestPartialReturns:
         assert isinstance(result, dict)
         assert partial_return in mapper.error_manager.errors
         assert result == expected
-
-        # # Verify the expected fields are present and have the correct values
-        # for field, value in expected.items():
-        #     assert field in result
-        #     assert result[field] == value
