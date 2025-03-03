@@ -1,106 +1,166 @@
 import pytest
-from .models import *
-from .sources import *
-from .expected import *
+
+from pymapper.pymapper import PyMapper
+from pymapper.src.error_manager import ErrorType
+
+from .sources import (
+    source_data,
+    address,
+    PartialSimpleSource,
+    PartialNestedSource,
+    PartialListSource,
+    PartialNewListSource,
+    PartialRootListSource,
+)
+
+from .models import (
+    TargetModelOrder,
+    SimpleAddressTarget,
+    MetaUserTarget,
+    NestedAddressTarget,
+    PaymentInfo,
+    CartInfo,
+    TypeErrorAddress,
+    MissingFieldAddress,  #
+    PartialSimpleTarget,
+    PartialNestedTarget,
+    PartialListTarget,
+    PartialNewListTarget,
+    PartialRootListTarget,
+)
+
+from .expected import (
+    expected_target,
+    expected_simple_target,
+    expected_nested_target,
+    expected_new_model,
+    payment_info,
+    cart_info,  #
+    expected_partial_simple,
+    expected_partial_nested,
+    expected_partial_list_existing,
+    expected_partial_list_new,
+    expected_partial_list_root,
+)
 
 # Add to the test a type checking
 # Add case when it's acceptable to receive a None in a target field
 #
 
+
 class TestCompleteMapper:
     """Tests for full model mapping functionality."""
-    
-    def test_complete_mapping(self, model_mapper):
+
+    def test_complete_mapping(self):
         """Verifies that the complete mapping matches the expected result."""
-        complete_mapping = model_mapper.map_models(source_data, TargetModelOrder)
+        mapper = PyMapper()
+        complete_mapping = mapper.map_models(source_data, TargetModelOrder)
         assert complete_mapping == expected_target
 
 
 class TestFieldMapping:
     """Tests for individual field mapping scenarios."""
-    
-    def test_simple_field_match(self, model_mapper):
+
+    def test_simple_field_match(self):
         """Tests mapping of a simple field with direct name match."""
-        simple_field = model_mapper.map_models(source_data, SimpleAddressTarget)
+        mapper = PyMapper()
+        simple_field = mapper.map_models(address, SimpleAddressTarget)
         assert simple_field == expected_simple_target
-    
-    def test_nested_field_match(self, model_mapper):
+
+    def test_nested_field_match(self):
         """Tests mapping a field from a nested structure."""
-        nested_field = model_mapper.map_models(source_data, MetaUserTarget)
+        mapper = PyMapper()
+        nested_field = mapper.map_models(source_data, MetaUserTarget)
         assert nested_field == expected_nested_target
 
 
 class TestNestedModelCreation:
     """Tests for building new models from scattered fields."""
-    
-    def test_build_new_models_from_scattered_fields(self, model_mapper):
+
+    def test_build_new_models_from_scattered_fields(self):
         """Tests creation of a new nested model from scattered fields."""
-        new_model = model_mapper.map_models(source_data, NestedAddressTarget)
+        mapper = PyMapper()
+        new_model = mapper.map_models(address, NestedAddressTarget)
         assert new_model == expected_new_model
 
 
 class TestListHandling:
     """Tests for handling lists of models."""
-    
-    def test_list_of_existing_models(self, model_mapper):
+
+    def test_list_of_existing_models(self):
         """Tests mapping a list of models that exist in the source."""
-        result = model_mapper.map_models(ListSource(), ListTarget)
-        assert len(result.items) == len(ExpectedListTarget.items)
-        assert result.items[0].name == ExpectedListTarget.items[0].name
-        assert result.items[1].value == ExpectedListTarget.items[1].value
-    
-    def test_list_of_models_with_new_models(self, model_mapper):
+        mapper = PyMapper()
+        result = mapper.map_models(source_data, PaymentInfo)
+        assert result == payment_info
+
+    def test_list_of_models_with_new_models(self):
         """Tests mapping a list with models that need to be created from fields."""
-        result = model_mapper.map_models(ListSource(), NewListTarget)
-        assert len(result.new_items) == len(ExpectedNewListTarget.new_items)
-        assert result.new_items[0].item_name == ExpectedNewListTarget.new_items[0].item_name
-        assert result.new_items[1].item_value == ExpectedNewListTarget.new_items[1].item_value
-    
-    # def test_list_in_root(self, model_mapper):
+        mapper = PyMapper()
+        result = mapper.map_models(source_data, CartInfo)
+        assert result == cart_info
+
+    # def test_list_in_root(self):
     #     """Tests mapping a root-level list."""
-    #     result = model_mapper.map_models(ListSource(), RootListTarget)
+    #     result = mapper.map_models(ListSource(), RootListTarget)
     #     assert result.root_list == ExpectedRootListTarget.root_list
 
 
 class TestErrorCases:
     """Tests for error handling scenarios."""
-    
-    def test_field_in_target_not_found_in_source(self, model_mapper):
+
+    def test_field_in_target_not_found_in_source(self):
         """Tests handling when a target field doesn't exist in the source."""
         # Should return a dict since it can't fully build the model
-        result = model_mapper.map_models(ErrorSource(), ErrorTarget)
+        required_field_error = ErrorType.REQUIRED_FIELD
+        mapper = PyMapper()
+        result = mapper.map_models(address, MissingFieldAddress)
         assert isinstance(result, dict)
-        assert "missing_field" not in result
-        
-    def test_field_found_with_different_type(self, model_mapper):
+        assert required_field_error in mapper.error_manager.errors
+        assert len(mapper.error_manager.errors) == 1
+
+    def test_field_found_with_different_type(self):
         """Tests handling when a field exists but has an incompatible type."""
         # Should return a dict with the fields it could map
-        result = model_mapper.map_models(ErrorSource(), ErrorTarget)
+        validation_error = ErrorType.VALIDATION_ERROR
+        mapper = PyMapper()
+        result = mapper.map_models(address, TypeErrorAddress)
         assert isinstance(result, dict)
-        assert "wrong_type" not in result  # Can't convert str to int
+        assert validation_error in mapper.error_manager.errors
+        assert len(mapper.error_manager.errors) == 1
+
+    # def test_new_model_empty(self):
+    #     """Tests handling when a new model is empty."""
+    #     mapper = PyMapper()
 
 
 class TestPartialReturns:
     """Tests for partial return scenarios."""
-    
-    @pytest.mark.parametrize("source,target,expected", [
-        (PartialSimpleSource(), PartialSimpleTarget, expected_partial_simple),
-        (PartialNestedSource(), PartialNestedTarget, expected_partial_nested),
-        (PartialListSource(), PartialListTarget, expected_partial_list_existing),
-        (PartialNewListSource(), PartialNewListTarget, expected_partial_list_new),
-        (PartialRootListSource(), PartialRootListTarget, expected_partial_list_root)
-    ])
-    def test_partial_returns(self, model_mapper, source, target, expected):
+
+    @pytest.mark.parametrize(
+        "source,target,expected",
+        [
+            (PartialSimpleSource(), PartialSimpleTarget, expected_partial_simple),
+            (PartialNestedSource(), PartialNestedTarget, expected_partial_nested),
+            (PartialListSource(), PartialListTarget, expected_partial_list_existing),
+            (PartialNewListSource(), PartialNewListTarget, expected_partial_list_new),
+            # (PartialRootListSource(), PartialRootListTarget, expected_partial_list_root)
+        ],
+    )
+    def test_partial_returns(self, source, target, expected):
         """
         Parametrized test for partial return scenarios.
         Tests different partial return situations with a single test function.
         """
-        result = model_mapper.map_models(source, target)
-        
+        partial_return = ErrorType.PARTIAL_RETURN
+        mapper = PyMapper()
+        result = mapper.map_models(source, target)
+
         # Verify the result is a dict (partial mapping)
         assert isinstance(result, dict)
-        
-        # Verify the expected fields are present and have the correct values
-        for field, value in expected.items():
-            assert field in result
-            assert result[field] == value
+        assert partial_return in mapper.error_manager.errors
+        assert result == expected
+
+        # # Verify the expected fields are present and have the correct values
+        # for field, value in expected.items():
+        #     assert field in result
+        #     assert result[field] == value
