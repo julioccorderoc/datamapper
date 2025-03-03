@@ -15,7 +15,7 @@ class PyMapper:
         self.logger = logger
         self._path_manager = DynamicPathManager()
         self.error_manager = ErrorManager()
-        self._field_cache = FieldCache()
+        self._cache = FieldCache()
         self._match_by_alias = match_by_alias
         self._source_name: str = ""
         self._target_name: str = ""
@@ -25,7 +25,7 @@ class PyMapper:
 
     def _start(self, source: BaseModel, target: Type[BaseModel]) -> None:
         """Starts the mapper"""
-        self._field_cache.clear()
+        self._cache.clear()
         self.error_manager.errors.clear()
         self._path_manager.clear()
         self._path_manager = DynamicPathManager("source", "target")
@@ -142,7 +142,7 @@ class PyMapper:
         target_path = self._path_manager.get_path("target")
 
         try:
-            value = self._get_nested_value(source, target_path, field_meta_data)
+            value = self._get_value(source, target_path, field_meta_data)
             if value is not None:
                 self.logger.debug(
                     f"✅ Simple field mapping successful for: {target_path}"
@@ -262,9 +262,9 @@ class PyMapper:
             return list_of_models
         return None
 
-    def _get_nested_value(
-        self,  # cambiar nombre de la funcion
-        source: BaseModel,
+    def _get_value(
+        self,
+        model_with_value: BaseModel,
         field_path: str,  # esto se puede simplificar, no se necesita el path_tracker, solo el nombre del campo
         field_meta_data: FieldMetaData,
     ) -> Any:
@@ -277,53 +277,57 @@ class PyMapper:
         """
         # field_path = self._path_manager.get_path("target")
         path_part = field_path.split(".")[-1]
-        current_model = source  # simplificar esta linea para que sea una sola
-        current_model = self._traverse_nested(
-            path_part, current_model, field_meta_data
+        current_model = model_with_value  # simplificar esta linea para que sea una sola
+        current_model = self._traverse_model(
+            current_model, path_part, field_meta_data
         )  # cambiar nombre de variable a value
 
         return current_model
 
-    def _traverse_nested(
+    def _traverse_model(
         self,
-        part: str,  # part_to_match # CHANGE "part" to "segment" or change "segment" to "field" in the path manager class
-        current: Any,  # cambiar el nombre para que combine con get_nested_value
+        model_to_traverse: Any,  # Should this be a BaseModel?
+        field_to_match: str,
         field_meta_data: FieldMetaData,
     ) -> Any:
         target_path = self._path_manager.get_path(
             "target"
         )  # validar si es necesario o se cambia por el field meta data, el asunto es que este perderia contexto cada vez que agrego algo al path
 
-        if hasattr(current, part):
-            value = getattr(
-                current, part
+        if hasattr(model_to_traverse, field_to_match):
+            value_matched = getattr(
+                model_to_traverse, field_to_match
             )  # TODO: try block to avoid unexpected exceptions
-            if value is not None:
-                with self._path_manager.track_segment("source", part):
+            if value_matched is not None:
+                with self._path_manager.track_segment("source", field_to_match):
                     source_path = self._path_manager.get_path("source")
-                    if not self._field_cache.is_cached(source_path):
+                    if not self._cache.is_cached(source_path):
                         self.error_manager.validate_type(
-                            target_path, field_meta_data.field_type, value, type(value)
+                            target_path,
+                            field_meta_data.field_type,
+                            value_matched,
+                            type(value_matched),
                         )
-
                         self.logger.debug(
                             f"🔍 Source field: '{source_path}' matched with target field: '{target_path}'"
                         )
-                        self._field_cache.add(source_path)
-                        return value
+                        self._cache.add(source_path)
+                        return value_matched
                     # Should I handle the case when it's in the cache?
             # Should I handle the case when the value is None?
 
         # Try searching nested structures
-        for nested_name, nested_info in current.model_fields.items():
+        for nested_name, nested_info in model_to_traverse.model_fields.items():
             with self._path_manager.track_segment("source", nested_name):
-                value = getattr(current, nested_name)
+                value = getattr(model_to_traverse, nested_name)
                 nested_meta_data = get_field_meta_data(
                     nested_info, nested_name, target_path
                 )
 
                 if nested_meta_data.is_model:
-                    nested_value = self._get_nested_value(value, part, field_meta_data)
+                    nested_value = self._get_value(
+                        value, field_to_match, field_meta_data
+                    )
                     if nested_value is not None:
                         return nested_value
 
@@ -332,8 +336,8 @@ class PyMapper:
                 ):  # modificar a lista de objetos
                     for index, model_in_list in enumerate(value):
                         with self._path_manager.track_segment("source", f"[{index}]"):
-                            nested_value = self._get_nested_value(
-                                model_in_list, part, field_meta_data
+                            nested_value = self._get_value(
+                                model_in_list, field_to_match, field_meta_data
                             )
                             if nested_value is not None:
                                 return nested_value
