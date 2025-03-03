@@ -133,21 +133,6 @@ class ErrorList:
             return not error_details.field_path.startswith(current_path)
         return error_details.field_path != current_path
 
-    def get_errors(self, error_type: ErrorType) -> List[ErrorDetails]:
-        return self.errors.get(error_type, [])
-
-    def display(self) -> None:
-        """Logs all accumulated mapping errors"""
-        if self.errors:
-            self.logger.error("📊 Mapping completed with the following issues:")
-            for error in self.errors:
-                print(
-                    f"  - Field: {error.field_path}\n"
-                    f"    Error type: {error.error_type.name}\n"
-                    f"    Description: {error.error_type.value}\n"
-                    f"    Error message: {error.details}"
-                )
-
     def clear(self) -> None:
         self.errors.clear()
 
@@ -157,9 +142,11 @@ class ErrorFormatter:
 
     @staticmethod
     def generate_summary(error_list: ErrorList, target_name: str) -> str:
-        summary = [f"'{len(error_list)}' errors found while mapping '{target_name}':"]
+        summary = [
+            f"'{len(error_list)}' error(s) found while mapping '{target_name}':\n"
+        ]
         for error_type, errors in error_list.items():
-            summary.append(f"  - {len(errors)} {error_type.name}")
+            summary.append(f"  > {len(errors)} {error_type.name}")
         return "\n".join(summary)
 
     @staticmethod
@@ -168,10 +155,10 @@ class ErrorFormatter:
         for error_type, errors in error_list.items():
             for error in errors:
                 details.append(
-                    f"Field: {error.field_path}\n"
-                    f"Type: {error_type.name}\n"
-                    f"Description: {error_type.value}\n"
-                    f"Message: {error.details}"
+                    f"      + Field: {error.field_path}\n"
+                    f"        Type: {error_type.name}\n"
+                    f"        Description: {error_type.value}\n"
+                    f"        Message: {error.details}"
                 )
         return "\n".join(details) if details else "No errors found."
 
@@ -215,16 +202,16 @@ class ErrorManager:
     def has_errors(self) -> bool:
         return len(self.error_list) > 0
 
-    def display(self, target_model_name: str) -> str:
+    def display(self, target_model_name: str) -> None:
         summary: str
         details: str
         display: str
 
         summary = self.formatter.generate_summary(self.error_list, target_model_name)
         details = self.formatter.generate_details(self.error_list)
-        display = f"{summary}\n{details}"
+        display = f"{summary}\n\n{details}\n"
 
-        return display
+        self.logger.error(display)
 
     def required_field(
         self, field_path: str, source_model_name: str, parent_model_name: str
