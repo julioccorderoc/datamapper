@@ -6,21 +6,29 @@ from .src.logger_config import logger
 from .src.field_meta_data import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorManager
 from .src.field_cache import FieldCache
+from .src.field_matcher import FieldMatcher
 
 
 class PyMapper:
     """Maps data between Pydantic models"""
 
-    def __init__(self, match_by_alias: bool = True):
+    def __init__(self, match_by_alias: bool = True, max_iter_list_new_model: int = 100):
         self.logger = logger
-        self._path_manager = DynamicPathManager()
-        self.error_manager = ErrorManager()
         self._cache = FieldCache()
+        self._path_manager = DynamicPathManager()
+        self.error_manager = ErrorManager(self._path_manager)
         self._match_by_alias = match_by_alias
         self._source_name: str = ""
         self._target_name: str = ""
-        self._max_iteration_to_build_list_of_models = (
-            100  # Safety limit for list processing
+        self._max_iter_list_new_model = (
+            max_iter_list_new_model  # Safety limit for list processing
+        )
+        self._field_matcher = FieldMatcher(
+            self._path_manager,
+            self.error_manager,
+            self._cache,
+            self._match_by_alias,
+            self._max_iter_list_new_model,
         )
 
     def _start(self, source: BaseModel, target: Type[BaseModel]) -> None:
@@ -226,8 +234,8 @@ class PyMapper:
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📑 Trying to build list of models for: {target_path}")
 
-        while index <= self._max_iteration_to_build_list_of_models:
-            if index == self._max_iteration_to_build_list_of_models:
+        while index <= self._max_iter_list_new_model:
+            if index == self._max_iter_list_new_model:
                 self.logger.warning(
                     f"📑 Reached max iteration to build list of models for: {target_path}"
                 )

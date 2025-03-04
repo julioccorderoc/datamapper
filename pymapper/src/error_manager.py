@@ -188,10 +188,9 @@ class ErrorFormatter:
 
 
 class ErrorManager:
-    def __init__(self):
-        # self._path_manager = DynamicPathManager()
-        self._path_manager = DynamicPathManager()
+    def __init__(self, path_manager: DynamicPathManager):
         self.logger = logger
+        self._path_manager = path_manager
         self.formatter = ErrorFormatter()
         self.error_list = ErrorList(self._path_manager)
 
