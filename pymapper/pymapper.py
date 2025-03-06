@@ -12,7 +12,7 @@ from .src.field_matcher import FieldMatcher
 class PyMapper:
     """Maps data between Pydantic models"""
 
-    def __init__(self, match_by_alias: bool = True, max_iter_list_new_model: int = 100):
+    def __init__(self, match_by_alias: bool = True, max_iterations: int = 100):
         self.logger = logger
         self._cache = FieldCache()
         self._path_manager = DynamicPathManager()
@@ -21,7 +21,7 @@ class PyMapper:
         self._source_name: str = ""
         self._target_name: str = ""
         self._max_iter_list_new_model = (
-            max_iter_list_new_model  # Safety limit for list processing
+            max_iterations  # Safety limit for list processing
         )
         self._field_matcher = FieldMatcher(
             self._path_manager,
@@ -38,16 +38,21 @@ class PyMapper:
         self._path_manager.clear()
         self._path_manager = DynamicPathManager("source", "target")
         target.model_rebuild()  # TODO: protect from errors
+        # self._max_iter_list_new_model
         self._source_name = source.__class__.__name__
         self._target_name = target.__name__
 
     def map_models(
         self, source: BaseModel, target: Type[BaseModel]
     ) -> Union[BaseModel, Dict[str, Any]]:
-        """Maps source model instance to target model type"""
+        """
+        Maps source model instance to target model type
+        """
+        # TODO: validate models
+
         self._start(source, target)
-        self.logger.debug(
-            f"🚀 Starting mapping from {self._source_name} to {self._target_name}"
+        self.logger.info(
+            f"🚀 Starting mapping from '{self._source_name}' to '{self._target_name}'."
         )
 
         try:
@@ -115,7 +120,7 @@ class PyMapper:
                         )
 
                 except Exception as e:
-                    self.error_manager.error_creating_field()
+                    self.error_manager.error_creating_field(e)
 
         return mapped
 
@@ -156,8 +161,8 @@ class PyMapper:
                     f"✅ Simple field mapping successful for: {target_path}"
                 )
                 return value
-        except TypeError as e:  # should't this be added to the mapping error list?
-            self.logger.debug(f"⚠️ Type conversion failed for {target_path}: {str(e)}")
+        except Exception as e:  # should't this be added to the mapping error list?
+            self.error_manager.error_creating_field(e)
 
         return None
 
@@ -167,6 +172,7 @@ class PyMapper:
         """Attempts to map a nested Pydantic model field"""
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📦 Trying model field mapping for: {target_path}")
+
         nested_data = {}
 
         for nested_field, nested_info in new_model_type.model_fields.items():
@@ -185,7 +191,7 @@ class PyMapper:
                         )
 
                 except Exception as e:
-                    self.error_manager.error_creating_field()
+                    self.error_manager.error_creating_field(e)
 
         if nested_data:  # can I simplify this try block? First check if there were validation errors in the level and act accordingly
             try:
@@ -197,9 +203,8 @@ class PyMapper:
                 )
                 return nested_data
             except Exception as e:
-                self.error_manager.error_creating_model()
+                self.error_manager.error_creating_field(e)
                 return None
-        # If there's not data, I have to remove the required field error to avoid redundancy
         elif not nested_data:
             self.error_manager.new_model_empty(target_path, new_model_type.__name__)
 
@@ -231,10 +236,11 @@ class PyMapper:
         self, source: BaseModel, field_meta_data: FieldMetaData
     ) -> Optional[List[BaseModel]]:
         """Attempts to build list of models from scattered data"""
-        list_of_models = []
-        index = 0
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📑 Trying to build list of models for: {target_path}")
+
+        list_of_models = []
+        index = 0
 
         while index <= self._max_iter_list_new_model:
             if index == self._max_iter_list_new_model:
@@ -262,9 +268,7 @@ class PyMapper:
                 except (
                     Exception
                 ) as e:  # should't this be added to the mapping error list?
-                    self.logger.debug(
-                        f"⚠️ Stopped building list of models at index {index}: {str(e)}"
-                    )
+                    self.error_manager.error_creating_field(e)
                     break
 
         if list_of_models:
@@ -272,109 +276,6 @@ class PyMapper:
             return list_of_models
         return None
 
-    # def _get_value(
-    #     self,
-    #     model_with_value: BaseModel,
-    #     field_path: str,  # esto se puede simplificar, no se necesita el path_tracker, solo el nombre del campo
-    #     field_meta_data: FieldMetaData,
-    # ) -> Any:
-    #     """
-    #     Searches for a field value, through nested structures if needed. Handles:
-    #         > Direct match
-    #         > Nested match (e.g., source.nested.field)
-    #         > List match (e.g., source.list_field[0].nested_field)
-    #         > Alias match (e.g., source.alias_field)
-    #     """
-    #     # field_path = self._path_manager.get_path("target")
-    #     path_part = field_path.split(".")[-1]
-    #     current_model = model_with_value  # simplificar esta linea para que sea una sola
-    #     current_model = self._traverse_model(
-    #         current_model, path_part, field_meta_data
-    #     )  # cambiar nombre de variable a value
 
-    #     return current_model
-
-    # def _traverse_model(
-    #     self,
-    #     model_to_traverse: Any,  # Should this be a BaseModel?
-    #     field_to_match: str,
-    #     field_meta_data: FieldMetaData,
-    # ) -> Any:
-    #     target_path = self._path_manager.get_path(
-    #         "target"
-    #     )  # validar si es necesario o se cambia por el field meta data, el asunto es que este perderia contexto cada vez que agrego algo al path
-
-    #     if hasattr(model_to_traverse, field_to_match):
-    #         value_matched = getattr(
-    #             model_to_traverse, field_to_match
-    #         )  # TODO: try block to avoid unexpected exceptions
-    #         if value_matched is not None:
-    #             with self._path_manager.track_segment("source", field_to_match):
-    #                 source_path = self._path_manager.get_path("source")
-    #                 if not self._cache.is_cached(source_path):
-    #                     self.error_manager.validate_type(
-    #                         target_path,
-    #                         field_meta_data.field_type,
-    #                         value_matched,
-    #                         type(value_matched),
-    #                     )
-    #                     self.logger.debug(
-    #                         f"🔍 Source field: '{source_path}' matched with target field: '{target_path}'"
-    #                     )
-    #                     self._cache.add(source_path)
-    #                     return value_matched
-    #                 # Should I handle the case when it's in the cache?
-    #         # Should I handle the case when the value is None?
-
-    #     # Try searching nested structures
-    #     for nested_name, nested_info in model_to_traverse.model_fields.items():
-    #         with self._path_manager.track_segment("source", nested_name):
-    #             value = getattr(model_to_traverse, nested_name)
-    #             nested_meta_data = get_field_meta_data(
-    #                 nested_info, nested_name, target_path
-    #             )
-
-    #             if nested_meta_data.is_model:
-    #                 nested_value = self._get_value(
-    #                     value, field_to_match, field_meta_data
-    #                 )
-    #                 if nested_value is not None:
-    #                     return nested_value
-
-    #             elif (
-    #                 nested_meta_data.is_collection_of_models
-    #             ):  # modificar a lista de objetos
-    #                 for index, model_in_list in enumerate(value):
-    #                     with self._path_manager.track_segment("source", f"[{index}]"):
-    #                         nested_value = self._get_value(
-    #                             model_in_list, field_to_match, field_meta_data
-    #                         )
-    #                         if nested_value is not None:
-    #                             return nested_value
-    #     return None
-
-    # def _find_model_instances(
-    #     self, source: BaseModel, model_type: Type[BaseModel]
-    # ) -> List[BaseModel]:
-    #     """Finds all instances of a specific model type in source data"""
-    #     instances = []
-    #     with self._path_manager.track_segment("source", ""):
-    #         self._search_instances(source, model_type, instances)
-    #     return instances
-
-    # def _search_instances(
-    #     self, value: Any, model_type: Type[BaseModel], instances: list
-    # ) -> None:
-    #     """Recursively searches for instances of model_type"""
-    #     if isinstance(value, model_type):
-    #         instances.append(value)
-
-    #     elif isinstance(value, BaseModel):
-    #         for field in value.model_fields:
-    #             with self._path_manager.track_segment("source", field):
-    #                 self._search_instances(getattr(value, field), model_type, instances)
-
-    #     elif isinstance(value, (list, tuple)):
-    #         for index, item in enumerate(value):
-    #             with self._path_manager.track_segment("source", f"[{index}]"):
-    #                 self._search_instances(item, model_type, instances)
+pymapper = PyMapper()
+map_models = pymapper.map_models

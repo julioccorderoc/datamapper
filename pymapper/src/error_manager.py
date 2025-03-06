@@ -11,27 +11,11 @@ from .logger_config import logger
 class ErrorType(Enum):
     """Enumeration of possible mapping error types"""
 
-    VALIDATION_ERROR = "Attemp to match a value with the wrong type"
+    VALIDATION = "Attemp to match a value with the wrong type"
     REQUIRED_FIELD = "Required field not found in source data"
     PARTIAL_RETURN = "The new model was partially created"
     EMPTY_MODEL = "Non of the fields in the new model were found in the source data"
-
-    NEW_MODEL_ERROR = "Error creating new model"
-    REQUIRED_TARGET_FIELD_MISSING = "required_target_field_missing"
-    NESTED_MODEL_CREATION = "nested_model_creation"
-    NESTED_MODEL_MAPPING = "nested_model_mapping"
-    NESTED_MODEL_REQUIRED_FIELD = "nested_model_required_field"
-    NESTED_MODEL_PARTIAL_RETURN = "nested_model_partial_return"
-    NESTED_MODEL_EMPTY = "nested_model_empty"
-    LIST_MAPPING_ERROR = "list_mapping_error"
-
-
-# @dataclass
-# class ErrorMessage:
-#     field: str
-#     error_type: ErrorType.name
-#     error_detail: ErrorType.value
-#     message: str
+    FIELD_CREATION = "An unexpected error occurred while creating a field"
 
 
 @dataclass
@@ -186,6 +170,11 @@ class ErrorFormatter:
         message = f"No data found to build the new model '{new_model_name}'."
         return message
 
+    @staticmethod
+    def field_creation_detail(error: Exception) -> str:
+        message = f"An unexpected error occurred while creating a field: {str(error)}"
+        return message
+
 
 class ErrorManager:
     def __init__(self, path_manager: DynamicPathManager):
@@ -235,9 +224,6 @@ class ErrorManager:
 
         self.add_validation_error(target_path, target_type, source_value, source_type)
 
-    def error_creating_field(self) -> None:
-        pass
-
     def new_model_partial(self, field_path: str, new_model_name: str) -> None:
         error_message = self.formatter.partial_detail(new_model_name)
         new_error = ErrorDetails(
@@ -247,8 +233,15 @@ class ErrorManager:
         )
         self.error_list.add(ErrorType.PARTIAL_RETURN, new_error)
 
-    def error_creating_model(self) -> None:
-        pass
+    def error_creating_field(self, error: Exception) -> None:
+        field_path = self._path_manager.get_path("target")
+        error_message = self.formatter.field_creation_detail(error)
+        new_error = ErrorDetails(
+            field_path=field_path,
+            error_type=ErrorType.FIELD_CREATION,
+            details=error_message,
+        )
+        self.error_list.add(ErrorType.FIELD_CREATION, new_error)
 
     def new_model_empty(self, field_path: str, new_model_name: str) -> None:
         error_message = self.formatter.empty_detail(new_model_name)
@@ -257,6 +250,7 @@ class ErrorManager:
             error_type=ErrorType.EMPTY_MODEL,
             details=error_message,
         )
+        # If there's not data, I have to remove the required field error to avoid redundancy
         self.error_list.remove(ErrorType.REQUIRED_FIELD)
         self.error_list.add(ErrorType.EMPTY_MODEL, new_error)
 
@@ -272,10 +266,10 @@ class ErrorManager:
         )
         new_error = ErrorDetails(
             field_path=field_path,
-            error_type=ErrorType.VALIDATION_ERROR,
+            error_type=ErrorType.VALIDATION,
             details=error_message,
         )
-        self.error_list.add(ErrorType.VALIDATION_ERROR, new_error)
+        self.error_list.add(ErrorType.VALIDATION, new_error)
 
     def is_valid_type(
         self, source_value: Any, target_type: type, strict: bool = False
