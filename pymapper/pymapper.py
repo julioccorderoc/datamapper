@@ -7,10 +7,13 @@ from .src.field_meta_data import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorManager
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
+from .src.exceptions import *
 
 
 class PyMapper:
-    """Maps data between Pydantic models"""
+    """
+    Maps data between Pydantic models
+    """
 
     def __init__(self, match_by_alias: bool = True, max_iterations: int = 100):
         self.logger = logger
@@ -60,41 +63,10 @@ class PyMapper:
                 with self._path_manager.track_segment("target", self._target_name):
                     mapped_data = self._map_model_fields(source, target)
 
-            # If no data was mapped, raise an error
-            if not mapped_data:
-                self.logger.critical(
-                    f"No mappable data found between {self._source_name} and {self._target_name}"
-                )
-                raise ValueError  # TODO: change this to a custom exception
-
-            # If some data was mapped, display errors if any and return the partial data
-            if self.error_manager.has_errors():
-                try:
-                    self.error_manager.display(self._target_name)
-                    self.logger.error(
-                        "⚠️ Returning partial data dictionary due to mapping errors"
-                    )
-                    return mapped_data
-                except Exception as e:
-                    self.logger.critical(f"💥 Partial mapping failed: {str(e)}")
-                    raise  # TODO: change this to a custom exception
-
-            # If no errors were found, create the target model instance
-            try:
-                result = target(
-                    **mapped_data
-                )  # TODO: revisar antes si hay un mismatch con los aliases
-                self.logger.info("🎉 Successfully created target model instance")
-                return result
-            except Exception as e:
-                self.logger.error(
-                    f"💥 Could not create the '{self._target_name}' model: {str(e)}. Returning the mapped data."
-                )
-                return mapped_data  # TODO: decide if it's better to return incomplete or incorrect data
+            return self._handle_return(mapped_data, target)
 
         except Exception as e:
-            self.logger.critical(f"💥 Mapping failed: {str(e)}")
-            raise  # TODO: change this to a custom exception
+            raise MappingError(self._source_name, self._target_name, e)
 
     def _map_model_fields(
         self, source: BaseModel, target: Type[BaseModel]
@@ -275,6 +247,37 @@ class PyMapper:
             self.logger.debug(f"✅ List of models built for: {target_path}")
             return list_of_models
         return None
+
+    def _handle_return(
+        self, mapped_data: Dict[str, Any], target: Type[BaseModel]
+    ) -> Union[BaseModel, Dict[str, Any]]:
+        """
+        Handles the return of the mapped data
+        """
+        # Check for no mapped data
+        if not mapped_data:
+            self.logger.critical(
+                f"No mappable data found between {self._source_name} and {self._target_name}"
+            )
+            raise NoMappableData(self._source_name, self._target_name)
+
+        # Handle errors if any
+        if self.error_manager.has_errors():
+            self.error_manager.display(self._target_name)
+            self.logger.error("⚠️ Returning partially mapped data.")
+            return mapped_data
+
+        # Try to return the mapped data
+        # TODO: revisar antes si hay un mismatch con los aliases
+        try:
+            result = target(**mapped_data)
+            self.logger.info("🎉 Successfully created target model instance")
+            return result
+        except Exception as e:
+            self.logger.error(
+                f"💥 Cannot create the '{self._target_name}' model due to the error: {str(e)}. >>> Returning the mapped data from '{self._source_name}'."
+            )
+            return mapped_data  # TODO: decide if it's better to return incomplete or incorrect data
 
 
 pymapper = PyMapper()
