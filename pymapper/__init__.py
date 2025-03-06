@@ -1,3 +1,3 @@
-from .pymapper import PyMapper
+from .pymapper import PyMapper, map_models
 
-__all__ = ["PyMapper"]
+__all__ = ["PyMapper", "map_models"]

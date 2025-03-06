@@ -1,6 +1,6 @@
 import pytest
 
-from pymapper.pymapper import PyMapper, map_models
+from pymapper import PyMapper, map_models
 from pymapper.src.error_manager import ErrorType
 
 from .sources import source_data, address
