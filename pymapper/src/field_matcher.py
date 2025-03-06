@@ -93,9 +93,7 @@ class FieldMatcher:
                     if nested_value is not None:
                         return nested_value
 
-                elif (
-                    nested_meta_data.is_collection_of_models
-                ):  # modificar a lista de objetos
+                elif nested_meta_data.is_collection_of_models:
                     for index, model_in_list in enumerate(value):
                         with self._path_manager.track_segment("source", f"[{index}]"):
                             nested_value = self.get_value(

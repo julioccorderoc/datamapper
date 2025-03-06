@@ -44,7 +44,7 @@
 - [x] Add support for a log level using the env variable LOG_LEVEL
 - [ ] Add cache and logging for the lists of models
 - [x] Not just validate if the source model has the field, but also if the field is not null
-- [ ] Add counter and summary for the types of errors in the list of errors
+- [x] Add counter and summary for the types of errors in the list of errors
 
 ## BUGS
 
@@ -56,11 +56,11 @@
   - Another solution could be to always match a nested model if it has the same name as the model being built.
 
 - [x] Currently, when returning a partial model, this is not serializable. Fix it so it always does. || They're not serializable due to the use of pydantic models within the dict. For them to be serializable, a special function has to be used as the default in the json.dumps function. Maybe, it could be useful to have an option to return the partial data as just serialable dicts.
-- [ ] Fix the log of the display method for the error manager: currently it's using a print
+- [x] Fix the log of the display method for the error manager: currently it's using a print
 
 ## REFACTORING
 
-- [ ] Move the field matching logic to a separate module
+- [x] Move the field matching logic to a separate module
 - [x] Move the error handling logic to a separate module
 
 ## MINOR

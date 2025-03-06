@@ -107,7 +107,7 @@ class TestErrorCases:
     def test_field_found_with_different_type(self):
         """Tests handling when a field exists but has an incompatible type."""
         # Should return a dict with the fields it could map
-        validation_error = ErrorType.VALIDATION_ERROR
+        validation_error = ErrorType.VALIDATION
         mapper = PyMapper()
         result = mapper.map_models(address, TypeErrorAddress)
         assert isinstance(result, dict)
