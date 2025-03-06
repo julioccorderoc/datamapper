@@ -9,7 +9,7 @@ from .logger_config import logger
 
 
 class ErrorType(Enum):
-    """Enumeration of possible mapping error types"""
+    """Enumeration of possible mapping errors"""
 
     VALIDATION = "Attemp to match a value with the wrong type"
     REQUIRED_FIELD = "Required field not found in source data"
@@ -180,8 +180,8 @@ class ErrorManager:
     def __init__(self, path_manager: DynamicPathManager):
         self.logger = logger
         self._path_manager = path_manager
-        self.formatter = ErrorFormatter()
         self.error_list = ErrorList(self._path_manager)
+        self.formatter = ErrorFormatter()
 
     @property
     def errors(self):
