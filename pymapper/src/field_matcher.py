@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Type, List, Any
+from typing import Type, List, Any  # , Optional
 
 from .error_manager import ErrorManager
 from .field_cache import FieldCache
@@ -52,9 +52,8 @@ class FieldMatcher:
         field_to_match: str,
         field_meta_data: FieldMetaData,
     ) -> Any:
-        target_path = self._path_manager.get_path(
-            "target"
-        )  # validar si es necesario o se cambia por el field meta data, el asunto es que este perderia contexto cada vez que agrego algo al path
+        target_path = self._path_manager.get_path("target")
+        # validar si es necesario o se cambia por el field meta data, el asunto es que este perderia contexto cada vez que agrego algo al path
 
         if hasattr(model_to_traverse, field_to_match):
             value_matched = getattr(

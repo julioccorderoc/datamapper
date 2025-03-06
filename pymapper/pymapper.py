@@ -39,7 +39,8 @@ class PyMapper:
         self._cache.clear()
         self.error_manager.errors.clear()
         self._path_manager.clear()
-        self._path_manager = DynamicPathManager("source", "target")
+        self._path_manager.create_path_type("source")
+        self._path_manager.create_path_type("target")
         target.model_rebuild()  # TODO: protect from errors
         # self._max_iter_list_new_model
         self._source_name = source.__class__.__name__
