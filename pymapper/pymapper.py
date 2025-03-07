@@ -7,7 +7,7 @@ from .src.field_meta_data import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorManager
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
-from .src.exceptions import *
+from .src.exceptions import MappingError, NoMappableData
 
 
 class PyMapper:
@@ -36,15 +36,18 @@ class PyMapper:
 
     def _start(self, source: BaseModel, target: Type[BaseModel]) -> None:
         """Starts the mapper"""
+        self._source_name = source.__class__.__name__
+        self._target_name = target.__name__
+        # self._max_iter_list_new_model
         self._cache.clear()
         self.error_manager.errors.clear()
         self._path_manager.clear()
-        self._path_manager.create_path_type("source")
-        self._path_manager.create_path_type("target")
+        self._path_manager.create_path_type("source", self._source_name)
+        self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: protect from errors
-        # self._max_iter_list_new_model
-        self._source_name = source.__class__.__name__
-        self._target_name = target.__name__
+        self.logger.info(
+            f"🚀 Starting mapping from '{self._source_name}' to '{self._target_name}'."
+        )
 
     def map_models(
         self, source: BaseModel, target: Type[BaseModel]
@@ -55,14 +58,9 @@ class PyMapper:
         # TODO: validate models
 
         self._start(source, target)
-        self.logger.info(
-            f"🚀 Starting mapping from '{self._source_name}' to '{self._target_name}'."
-        )
 
         try:
-            with self._path_manager.track_segment("source", self._source_name):
-                with self._path_manager.track_segment("target", self._target_name):
-                    mapped_data = self._map_model_fields(source, target)
+            mapped_data = self._map_model_fields(source, target)
 
             return self._handle_return(mapped_data, target)
 
