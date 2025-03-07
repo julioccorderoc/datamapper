@@ -53,6 +53,29 @@ class DynamicPathManagerException(PyMapperException):
     pass
 
 
+class UnknownPathTypeException(DynamicPathManagerException):
+    """Exception raised when a path type is not recognized"""
+
+    def __init__(self, path_type: str, available_paths: list[str]):
+        self.path_type = path_type
+        self.available_paths = available_paths
+        super().__init__(
+            f"Unknown path type: '{path_type}'. Available types: '{available_paths}'."
+        )
+
+
+class InvalidPathSegmentError(DynamicPathManagerException):
+    """Raised when attempting invalid path segment operations"""
+
+    def __init__(self, path_type: str, segment: str):
+        self.path_type = path_type
+        self.segment = segment
+        super().__init__(
+            f"Path '{path_type}': Cannot add list index without preceding field segment: (Segment: '{segment}')."
+            "List indices must follow a field segment."
+        )
+
+
 class FieldMetaDataException(PyMapperException):
     """Exception raised when there's an error in the FieldMetaData"""
 
