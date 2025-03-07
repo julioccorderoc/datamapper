@@ -1,6 +1,8 @@
 from contextlib import contextmanager
+from typing import Tuple
 
 from .logger_config import logger
+from .exceptions import UnknownPathTypeException, InvalidPathSegmentError
 
 
 class DynamicPathManager:
@@ -15,42 +17,42 @@ class DynamicPathManager:
         - SourceModel.list_field[0].nested_field
     """
 
-    def __init__(self, *path_configs: str):
+    def __init__(self, *path_configs: Tuple[str, str]):
         """
-        Initialize path trackers with path types and their model names.
+        Initialize with path configurations containing (path_type, model_name)
 
         Args:
-            *path_configs: Variable number of strings contaning the path identifiers
+            path_configs: Tuples of (path_identifier, associated_model_name)
 
         Example:
-            >>> tracker = PathTracker(("source", "UserModel"), ("target", "ProfileModel"))
-            >>> tracker = PathTracker(
+            >>> tracker = DynamicPathManager(("source", "UserModel"), ("target", "ProfileModel"))
+            >>> tracker = DynamicPathManager(
             ...     ("input", "RequestModel"),
             ...     ("output", "ResponseModel"),
             ...     ("intermediate", "ProcessModel")
             ... )
         """
-        self.logger = logger
+        self._logger = logger
         self._path_registry = {}
-        for path_identifier in path_configs:
-            self.create_path_type(path_identifier)
+        for path_type, model_name in path_configs:
+            self.create_path_type(path_type, model_name)
 
-    def create_path_type(self, path_identifier: str) -> None:
+    def create_path_type(self, path_identifier: str, model_name: str) -> None:
         """
+        Create new path type with associated model name
+
         Args:
-            path_identifier: Identifier for the new path type
+            path_identifier: Unique identifier for the path type
+            model_name: Associated model name for path formatting
 
         Raises:
-            ValueError: If path_identifier already exists
-
-        Example:
-            >>> tracker.create_path_type("validation", "ValidationModel")
+            ValueError: If path type already exists
         """
-        if path_identifier in self._path_registry:
-            self.logger.warning(f"Path type already exists: {path_identifier}")
+        if self._is_valid_path(path_identifier):
+            self.logger.warning(f"Path type '{path_identifier}' already exists.")
             return
 
-        self._path_registry[path_identifier] = {"segments": []}
+        self._path_registry[path_identifier] = {"model": model_name, "segments": []}
 
     @contextmanager
     def track_segment(self, path_identifier: str, segment: str):
@@ -69,31 +71,18 @@ class DynamicPathManager:
             >>>     with tracker.track_segment("source", "[0]"):
             >>>         # Path will be "SourceModel.user[0]"
         """
-        self._is_valid_path(path_identifier)
-        segments = self._path_registry[path_identifier]["segments"]
-
-        if segment.startswith("[") and segment.endswith("]"):
-            if not segments:
-                raise ValueError(
-                    f"Cannot add list index {segment} without a preceding segment for {path_identifier} path."
-                )
-            segments[-1] += segment
-        else:
-            segments.append(segment)
+        self._validate_path_exists(path_identifier)
+        registry_entry = self._path_registry[path_identifier]
 
         try:
+            self._append_segment(path_identifier, registry_entry, segment)
             yield
         finally:
-            if segments:
-                if segment.startswith("[") and segment.endswith("]"):
-                    # Remove the index from the last segment
-                    segments[-1] = segments[-1][: -len(segment)]
-                else:
-                    segments.pop()
+            self._remove_segment(registry_entry, segment)
 
     def get_path(self, path_identifier: str) -> str:
         """
-        Get the full path for a specific path type, including the model name.
+        Get the path for a specific path type, including the model name.
 
         Args:
             path_identifier: Identifier for the path type
@@ -104,24 +93,52 @@ class DynamicPathManager:
         Raises:
             ValueError: If path_identifier is not recognized
         """
-        self._is_valid_path(path_identifier)
-        segments = self._path_registry[path_identifier]["segments"]
-        return ".".join(segments) if segments else ""
+        self._validate_path_exists(path_identifier)
+        entry = self._path_registry[path_identifier]
+        return (
+            f"{entry['model']}.{'.'.join(entry['segments'])}"
+            if entry["segments"]
+            else entry["model"]
+        )
 
-    def _is_valid_path(self, path_identifier: str) -> None:
-        """
-        Validate that a path type exists in the tracker.
+    def _is_valid_path(self, path_identifier: str) -> bool:
+        """Validate if the path type exists in the registry"""
+        return path_identifier in self._path_registry
 
-        Args:
-            path_identifier: Identifier to validate
+    def _validate_path_exists(self, path_identifier: str) -> None:
+        """Centralized validation with improved error message"""
+        if not self._is_valid_path(path_identifier):
+            available = list(self._path_registry.keys())
+            raise UnknownPathTypeException(path_identifier, available)
 
-        Raises:
-            ValueError: If path_identifier is not recognized
-        """
-        if path_identifier not in self._path_registry:
-            raise ValueError(
-                f"Unknown path type: '{path_identifier}'. Available types: {list(self._path_registry.keys())}"
-            )
+    def _append_segment(
+        self, path_identifier: str, registry_entry: dict, segment: str
+    ) -> None:
+        """Extracted segment appending logic with improved error handling"""
+        segments = registry_entry["segments"]
+
+        if self._is_list_index(segment):
+            if not segments:
+                raise InvalidPathSegmentError(
+                    path_type=path_identifier, segment=segment
+                )
+            segments[-1] += segment
+        else:
+            segments.append(segment)
+
+    def _remove_segment(self, registry_entry: dict, segment: str) -> None:
+        """Extracted segment removal logic"""
+        segments = registry_entry["segments"]
+
+        if self._is_list_index(segment):
+            segments[-1] = segments[-1].replace(segment, "", 1)
+        else:
+            segments.pop()
+
+    @staticmethod
+    def _is_list_index(segment: str) -> bool:
+        """Validation for list index format"""
+        return segment.startswith("[") and segment.endswith("]")
 
     def list_path_types(self) -> list[str]:
         """
