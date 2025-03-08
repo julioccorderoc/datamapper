@@ -1,0 +1,31 @@
+[project]
+name = "pymapper"
+version = "0.1.0"
+description = "Map data between pydantic models"
+authors = [
+  { name = "Julio Cordero", email = "julioccorderoc@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic>=2.10.6",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "black>=25.1.0",
+    "dotenv>=0.9.9",
+    "flake8>=7.1.2",
+    "mypy>=1.15.0",
+    "pylint>=3.3.4",
+    "pytest>=8.3.5",
+]
+
+[tool.black]
+line-length = 88
+
+[tool.mypy]
+strict = true
+
+[tool.pylint]
+max-line-length = 88
