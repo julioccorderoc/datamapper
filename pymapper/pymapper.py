@@ -50,7 +50,7 @@ class PyMapper:
         )
 
     def map_models(
-        self, source: BaseModel, target: Type[BaseModel]
+        self, source: BaseModel, target: Type[BaseModel], serialize: bool = False
     ) -> Union[BaseModel, Dict[str, Any]]:
         """
         Maps source model instance to target model type
@@ -62,7 +62,7 @@ class PyMapper:
         try:
             mapped_data = self._map_model_fields(source, target)
 
-            return self._handle_return(mapped_data, target)
+            return self._handle_return(mapped_data, target, serialize)
 
         except Exception as e:
             raise MappingError(self._source_name, self._target_name, e)
@@ -248,11 +248,18 @@ class PyMapper:
         return None
 
     def _handle_return(
-        self, mapped_data: Dict[str, Any], target: Type[BaseModel]
+        self,
+        mapped_data: Dict[str, Any],
+        target: Type[BaseModel],
+        serialize: bool = False,
     ) -> Union[BaseModel, Dict[str, Any]]:
         """
         Handles the return of the mapped data
         """
+        # TODO: add support for the return of a serialized dict
+        if serialize:
+            pass
+
         # Check for no mapped data
         if not mapped_data:
             self.logger.critical(
