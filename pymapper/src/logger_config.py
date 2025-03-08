@@ -1,10 +1,13 @@
 import os
 import logging
 import inspect
-from dotenv import load_dotenv  # Properly load environment variables
 
-# Load environment variables from .env file
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
 
 
 class ContextualFormatter(logging.Formatter):
