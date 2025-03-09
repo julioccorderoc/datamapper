@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ValidationError
 from typing import Type, Any, List, Optional, Dict, Union, Sequence
+from pydantic import BaseModel, ValidationError
 
 from .src.path_manager import DynamicPathManager
 from .src.logger_config import logger
@@ -20,7 +20,7 @@ class PyMapper:
     """
 
     def __init__(self, match_by_alias: bool = True, max_iterations: int = 100):
-        self.logger = logger
+        self._logger = logger
         self._cache = FieldCache()
         self._path_manager = DynamicPathManager()
         self.error_manager = ErrorManager(self._path_manager)
@@ -49,8 +49,10 @@ class PyMapper:
         self._path_manager.create_path_type("source", self._source_name)
         self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: protect from errors
-        self.logger.info(
-            f"🚀 Starting mapping from '{self._source_name}' to '{self._target_name}'."
+        self._logger.info(
+            "🚀 Starting mapping from '%s' to '%s'.",
+            self._source_name,
+            self._target_name,
         )
 
     def map_models(
@@ -106,7 +108,7 @@ class PyMapper:
     def _map_field(self, source: BaseModel, field_meta_data: FieldMetaData) -> Any:
         """Maps a single field through different possible cases"""
         target_path = self._path_manager.get_path("target")
-        self.logger.debug(f"⏳ Attempting to map field: {target_path}")
+        self._logger.debug("⏳ Attempting to map field: %s", target_path)
 
         # Try simple field mapping first
         value = self._handle_simple_field(source, field_meta_data)
@@ -136,8 +138,8 @@ class PyMapper:
         try:
             value = self._field_matcher.get_value(source, target_path, field_meta_data)
             if value is not None:
-                self.logger.debug(
-                    f"✅ Simple field mapping successful for: {target_path}"
+                self._logger.debug(
+                    "✅ Simple field mapping successful for: %s", target_path
                 )
                 return value
         except Exception as e:  # should't this be added to the mapping error list?
@@ -150,7 +152,7 @@ class PyMapper:
     ) -> Union[BaseModel, dict[str, Any], None]:
         """Attempts to map a nested Pydantic model field"""
         target_path = self._path_manager.get_path("target")
-        self.logger.debug(f"📦 Trying model field mapping for: {target_path}")
+        self._logger.debug("📦 Trying model field mapping for: %s", target_path)
 
         nested_data: dict[str, Any] = {}
 
@@ -178,7 +180,7 @@ class PyMapper:
 
         if nested_data:  # can I simplify this try block? First check if there were validation errors in the level and act accordingly
             try:
-                self.logger.debug(f"✅ New model created for: {target_path}")
+                self._logger.debug("✅ New model created for: %s", target_path)
                 return new_model_type(**nested_data)
             except ValidationError:
                 self.error_manager.new_model_partial(
@@ -201,14 +203,14 @@ class PyMapper:
     ) -> Optional[Sequence[Union[BaseModel, Dict[str, Any]]]]:
         """Attempts to map a List[PydanticModel] field"""
         target_path = self._path_manager.get_path("target")
-        self.logger.debug(f"📑 Trying list field mapping for: {target_path}")
+        self._logger.debug("📑 Trying list field mapping for: %s", target_path)
 
         # Try to find direct instances first
         list_of_models = self._field_matcher.find_model_instances(
             source, field_meta_data.model_type_safe
         )
         if list_of_models:
-            self.logger.debug(f"✅ List of direct instances found for: {target_path}")
+            self._logger.debug("✅ List of direct instances found for: %s", target_path)
             return list_of_models
 
         # Try to build instances from scattered data
@@ -223,15 +225,16 @@ class PyMapper:
     ) -> Optional[List[Union[BaseModel, Dict[str, Any]]]]:
         """Attempts to build list of models from scattered data"""
         target_path = self._path_manager.get_path("target")
-        self.logger.debug(f"📑 Trying to build list of models for: {target_path}")
+        self._logger.debug("📑 Trying to build list of models for: %s", target_path)
 
         list_of_models: List[Union[BaseModel, Dict[str, Any]]] = []
         index = 0
 
         while index <= self._max_iter_list_new_model:
             if index == self._max_iter_list_new_model:
-                self.logger.warning(
-                    f"📑 Reached max iteration to build list of models for: {target_path}"
+                self._logger.warning(
+                    "📑 Reached max iteration to build list of models for: %s",
+                    target_path,
                 )
 
             with self._path_manager.track_segment("target", f"[{index}]"):
@@ -258,7 +261,7 @@ class PyMapper:
                     break
 
         if list_of_models:
-            self.logger.debug(f"✅ List of models built for: {target_path}")
+            self._logger.debug("✅ List of models built for: %s", target_path)
             return list_of_models
         return None
 
@@ -277,26 +280,31 @@ class PyMapper:
 
         # Check for no mapped data
         if not mapped_data:
-            self.logger.critical(
-                f"No mappable data found between {self._source_name} and {self._target_name}"
+            self._logger.critical(
+                "No mappable data found between %s and %s",
+                self._source_name,
+                self._target_name,
             )
             raise NoMappableData(self._source_name, self._target_name)
 
         # Handle errors if any
         if self.error_manager.has_errors():
             self.error_manager.display(self._target_name)
-            self.logger.error("⚠️ Returning partially mapped data.")
+            self._logger.error("⚠️ Returning partially mapped data.")
             return mapped_data
 
         # Try to return the mapped data
         # TODO: revisar antes si hay un mismatch con los aliases
         try:
             result = target(**mapped_data)
-            self.logger.info("🎉 Successfully created target model instance")
+            self._logger.info("🎉 Successfully created target model instance")
             return result
-        except Exception as e:
-            self.logger.error(
-                f"💥 Cannot create the '{self._target_name}' model due to the error: {str(e)}. >>> Returning the mapped data from '{self._source_name}'."
+        except Exception as error:
+            self._logger.error(
+                "💥 Cannot create the '%s' model due to the error: %s. >>> Returning the mapped data from '%s'.",
+                self._target_name,
+                error,
+                self._source_name,
             )
             return mapped_data  # TODO: decide if it's better to return incomplete or incorrect data
 

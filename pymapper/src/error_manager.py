@@ -31,7 +31,7 @@ class ErrorDetails:
 class ErrorList:
     def __init__(self, path_manager: DynamicPathManager):
         self.errors: DefaultDict[ErrorType, List[ErrorDetails]] = defaultdict(list)
-        self.logger = logger
+        self._logger = logger
         self._path_manager = path_manager
 
     def __len__(self) -> int:
@@ -65,8 +65,11 @@ class ErrorList:
 
         self.errors[error_type].append(error_details)
 
-        self.logger.warning(
-            f"❌ Error in field '{field_path}': [{error_type.name}] >>> {error_details.details}"
+        self._logger.warning(
+            "❌ Error in field '%s': [%s] >>> %s",
+            field_path,
+            error_type.name,
+            error_details.details,
         )
 
     def remove(self, error_type: ErrorType) -> None:
@@ -96,8 +99,11 @@ class ErrorList:
                 self.errors[error_type] = filtered_errors
             else:  # If no errors are left, remove the key entirely
                 del self.errors[error_type]
-            self.logger.warning(
-                f"🗑️ Removed '{removed_count}' {error_type.name} error(s) in path: '{field_path}'"
+            self._logger.warning(
+                "🗑️ Removed '%s' %s error(s) in path: '%s'",
+                removed_count,
+                error_type.name,
+                field_path,
             )
 
     def _should_keep_error(
@@ -179,7 +185,7 @@ class ErrorFormatter:
 
 class ErrorManager:
     def __init__(self, path_manager: DynamicPathManager):
-        self.logger = logger
+        self._logger = logger
         self._path_manager = path_manager
         self.error_list = ErrorList(self._path_manager)
         self.formatter = ErrorFormatter()
@@ -200,7 +206,7 @@ class ErrorManager:
         details = self.formatter.generate_details(self.error_list)
         display = f"{summary}\n\n{details}\n"
 
-        self.logger.error(display)
+        self._logger.error(display)
 
     def required_field(
         self, field_path: str, source_model_name: str, parent_model_name: str

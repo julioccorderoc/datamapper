@@ -49,7 +49,7 @@ class DynamicPathManager:
             ValueError: If path type already exists
         """
         if self._is_valid_path(path_identifier):
-            self._logger.warning(f"Path type '{path_identifier}' already exists.")
+            self._logger.warning("Path type '%s' already exists.", path_identifier)
             return
 
         self._path_registry[path_identifier] = {"model": model_name, "segments": []}

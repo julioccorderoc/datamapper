@@ -70,7 +70,9 @@ class FieldMatcher:
                             type(value_matched),
                         )
                         self.logger.debug(
-                            f"🔍 Source field: '{source_path}' matched with target field: '{target_path}'"
+                            "🔍 Source field: '%s' matched with target field: '%s'",
+                            source_path,
+                            target_path,
                         )
                         self._cache.add(source_path)
                         return value_matched
