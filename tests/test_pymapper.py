@@ -29,7 +29,7 @@ from .expected import (
     expected_list_new_partial,
 )
 
-# Add to the test a type checking
+
 # Add case when it's acceptable to receive a None in a target field
 #
 

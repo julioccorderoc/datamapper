@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Tuple
+from typing import Tuple, Union, Generator, cast
 
 from .logger_config import logger
 from .exceptions import UnknownPathTypeException, InvalidPathSegmentError
@@ -33,7 +33,7 @@ class DynamicPathManager:
             ... )
         """
         self._logger = logger
-        self._path_registry = {}
+        self._path_registry: dict[str, dict[str, Union[str, list[str]]]] = {}
         for path_type, model_name in path_configs:
             self.create_path_type(path_type, model_name)
 
@@ -49,13 +49,15 @@ class DynamicPathManager:
             ValueError: If path type already exists
         """
         if self._is_valid_path(path_identifier):
-            self.logger.warning(f"Path type '{path_identifier}' already exists.")
+            self._logger.warning(f"Path type '{path_identifier}' already exists.")
             return
 
         self._path_registry[path_identifier] = {"model": model_name, "segments": []}
 
     @contextmanager
-    def track_segment(self, path_identifier: str, segment: str):
+    def track_segment(
+        self, path_identifier: str, segment: str
+    ) -> Generator[None, None, None]:
         """
         Context manager for tracking path segments for any path type.
 
@@ -95,11 +97,9 @@ class DynamicPathManager:
         """
         self._validate_path_exists(path_identifier)
         entry = self._path_registry[path_identifier]
-        return (
-            f"{entry['model']}.{'.'.join(entry['segments'])}"
-            if entry["segments"]
-            else entry["model"]
-        )
+        model_name = cast(str, entry["model"])
+        segments = cast(list[str], entry["segments"])
+        return f"{model_name}.{'.'.join(segments)}" if segments else model_name
 
     def _is_valid_path(self, path_identifier: str) -> bool:
         """Validate if the path type exists in the registry"""
@@ -112,10 +112,13 @@ class DynamicPathManager:
             raise UnknownPathTypeException(path_identifier, available)
 
     def _append_segment(
-        self, path_identifier: str, registry_entry: dict, segment: str
+        self,
+        path_identifier: str,
+        registry_entry: dict[str, Union[str, list[str]]],
+        segment: str,
     ) -> None:
-        """Extracted segment appending logic with improved error handling"""
-        segments = registry_entry["segments"]
+        """Segment appending logic"""
+        segments = cast(list[str], registry_entry["segments"])
 
         if self._is_list_index(segment):
             if not segments:
@@ -126,9 +129,11 @@ class DynamicPathManager:
         else:
             segments.append(segment)
 
-    def _remove_segment(self, registry_entry: dict, segment: str) -> None:
+    def _remove_segment(
+        self, registry_entry: dict[str, Union[str, list[str]]], segment: str
+    ) -> None:
         """Extracted segment removal logic"""
-        segments = registry_entry["segments"]
+        segments = cast(list[str], registry_entry["segments"])
 
         if self._is_list_index(segment):
             segments[-1] = segments[-1].replace(segment, "", 1)

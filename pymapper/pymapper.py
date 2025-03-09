@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ValidationError
-from typing import Type, Any, List, Optional, Dict, Union
+from typing import Type, Any, List, Optional, Dict, Union, Sequence
 
 from .src.path_manager import DynamicPathManager
 from .src.logger_config import logger
@@ -8,6 +8,10 @@ from .src.error_manager import ErrorManager
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.exceptions import MappingError, NoMappableData
+
+# TODO: add type aliases like ModelType = Type[BaseModel]
+# TODO: add support for the return of a serialized dict
+# TODO: add get_origin for precise validation
 
 
 class PyMapper:
@@ -71,17 +75,21 @@ class PyMapper:
         self, source: BaseModel, target: Type[BaseModel]
     ) -> Dict[str, Any]:
         """Maps all fields from source to target model structure"""
-        mapped = {}
+        mapped: dict[str, Any] = {}
 
         for field_name, field_info in target.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
                 try:
                     target_path = self._path_manager.get_path("target")
+
+                    # try:
                     field_meta_data = get_field_meta_data(
                         field_info, self._target_name, target_path
                     )
-
                     value = self._map_field(source, field_meta_data)
+                    # except InvalidModelTypeError as e:
+                    #     self.error_manager.type_error(e)
+                    #     value = None
 
                     if value is not None:
                         mapped[field_name] = value
@@ -107,7 +115,7 @@ class PyMapper:
 
         # Try creating a new model from scattered data
         if field_meta_data.is_model:
-            value = self._handle_new_model(source, field_meta_data.field_type)
+            value = self._handle_new_model(source, field_meta_data.model_type_safe)
             if value is not None:
                 return value
 
@@ -139,20 +147,24 @@ class PyMapper:
 
     def _handle_new_model(
         self, source: BaseModel, new_model_type: Type[BaseModel]
-    ) -> Optional[BaseModel]:
+    ) -> Union[BaseModel, dict[str, Any], None]:
         """Attempts to map a nested Pydantic model field"""
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📦 Trying model field mapping for: {target_path}")
 
-        nested_data = {}
+        nested_data: dict[str, Any] = {}
 
         for nested_field, nested_info in new_model_type.model_fields.items():
             with self._path_manager.track_segment("target", nested_field):
                 try:
+                    # try:
                     nested_meta_data = get_field_meta_data(
                         nested_info, new_model_type.__name__, target_path
                     )
                     nested_value = self._map_field(source, nested_meta_data)
+                    # except InvalidModelTypeError as e:
+                    #     self.error_manager.type_error(e)
+                    #     nested_value = None
 
                     if nested_value is not None:
                         nested_data[nested_field] = nested_value
@@ -181,16 +193,19 @@ class PyMapper:
 
         return None
 
+    # Using Sequence (not List) for covariance: allows List[BaseModel] to be
+    # assigned to Sequence[Union[BaseModel, Dict]], maintaining type safety
+    # for read operations while allowing flexibility in return types
     def _handle_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> Optional[List[BaseModel]]:
+    ) -> Optional[Sequence[Union[BaseModel, Dict[str, Any]]]]:
         """Attempts to map a List[PydanticModel] field"""
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📑 Trying list field mapping for: {target_path}")
 
         # Try to find direct instances first
         list_of_models = self._field_matcher.find_model_instances(
-            source, field_meta_data.model_type
+            source, field_meta_data.model_type_safe
         )
         if list_of_models:
             self.logger.debug(f"✅ List of direct instances found for: {target_path}")
@@ -205,12 +220,12 @@ class PyMapper:
 
     def _build_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> Optional[List[BaseModel]]:
+    ) -> Optional[List[Union[BaseModel, Dict[str, Any]]]]:
         """Attempts to build list of models from scattered data"""
         target_path = self._path_manager.get_path("target")
         self.logger.debug(f"📑 Trying to build list of models for: {target_path}")
 
-        list_of_models = []
+        list_of_models: List[Union[BaseModel, Dict[str, Any]]] = []
         index = 0
 
         while index <= self._max_iter_list_new_model:
@@ -223,7 +238,7 @@ class PyMapper:
                 try:
                     model = self._handle_new_model(
                         source,
-                        field_meta_data.model_type,
+                        field_meta_data.model_type_safe,
                     )
 
                     # The last model will be empty, because the index won't exists in the source.

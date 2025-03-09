@@ -17,16 +17,16 @@ class MappingError(PyMapperException):
         )
 
 
-class InvalidArguments(MappingError):
+class InvalidArguments(PyMapperException):
     """Exception raised when invalid arguments are passed"""
 
     pass
 
 
-class NoMappableData(MappingError):
+class NoMappableData(PyMapperException):
     """Exception raised when there's no mappable data"""
 
-    def __init__(self, source_model_name: str, target_model_name: str):
+    def __init__(self, source_model_name: str, target_model_name: str) -> None:
         self.source_model_name = source_model_name
         self.target_model_name = target_model_name
         super().__init__(
@@ -34,12 +34,12 @@ class NoMappableData(MappingError):
         )
 
 
-class ErrorReturningPartial(MappingError):
+class ErrorReturningPartial(PyMapperException):
     """Exception raised if an unindentified error happens when returning partial data"""
 
     def __init__(
         self, source_model_name: str, target_model_name: str, error: Exception
-    ):
+    ) -> None:
         self.source_model_name = source_model_name
         self.target_model_name = target_model_name
         super().__init__(
@@ -47,13 +47,20 @@ class ErrorReturningPartial(MappingError):
         )
 
 
-class DynamicPathManagerException(PyMapperException):
-    """Exception raised when there's an error in the DynamicPathManager"""
+class InvalidModelTypeError(PyMapperException):
+    """Raised when a field requires a specific model type but receives invalid type"""
 
-    pass
+    def __init__(self, field_path: str, expected_type: type, actual_type: type):
+        super().__init__(
+            f"Field '{field_path}' requires model type {expected_type.__name__}, "
+            f"but got {actual_type.__name__ if actual_type else 'None'}"
+        )
+        self.field_path = field_path
+        self.expected_type = expected_type
+        self.actual_type = actual_type
 
 
-class UnknownPathTypeException(DynamicPathManagerException):
+class UnknownPathTypeException(PyMapperException):
     """Exception raised when a path type is not recognized"""
 
     def __init__(self, path_type: str, available_paths: list[str]):
@@ -64,7 +71,7 @@ class UnknownPathTypeException(DynamicPathManagerException):
         )
 
 
-class InvalidPathSegmentError(DynamicPathManagerException):
+class InvalidPathSegmentError(PyMapperException):
     """Raised when attempting invalid path segment operations"""
 
     def __init__(self, path_type: str, segment: str):

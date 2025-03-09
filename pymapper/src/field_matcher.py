@@ -65,7 +65,7 @@ class FieldMatcher:
                     if not self._cache.is_cached(source_path):
                         self._error_manager.validate_type(
                             target_path,
-                            field_meta_data.field_type,
+                            field_meta_data.field_type_safe,
                             value_matched,
                             type(value_matched),
                         )
@@ -106,13 +106,13 @@ class FieldMatcher:
         self, source: BaseModel, model_type: Type[BaseModel]
     ) -> List[BaseModel]:
         """Finds all instances of a specific model type in source data"""
-        instances = []
+        instances: List[BaseModel] = []
         with self._path_manager.track_segment("source", ""):
             self.search_instances(source, model_type, instances)
         return instances
 
     def search_instances(
-        self, value: Any, model_type: Type[BaseModel], instances: list
+        self, value: Any, model_type: Type[BaseModel], instances: List[BaseModel]
     ) -> None:
         """Recursively searches for instances of model_type"""
         if isinstance(value, model_type):
@@ -128,6 +128,7 @@ class FieldMatcher:
                 with self._path_manager.track_segment("source", f"[{index}]"):
                     self.search_instances(item, model_type, instances)
 
+    # # TODO: use a callable to pass the build new model method
     # def _build_list_of_model(
     #     self, source: BaseModel, field_meta_data: FieldMetaData
     # ) -> Optional[List[BaseModel]]:

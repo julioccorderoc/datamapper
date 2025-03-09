@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, DefaultDict
+from typing import Iterable, Optional, Any, List, DefaultDict
 from collections import defaultdict
-from pydantic import BaseModel, ValidationError, ConfigDict
+from pydantic import ValidationError, ConfigDict, create_model
 
 from .path_manager import DynamicPathManager
 from .logger_config import logger
@@ -16,6 +16,7 @@ class ErrorType(Enum):
     PARTIAL_RETURN = "The new model was partially created"
     EMPTY_MODEL = "Non of the fields in the new model were found in the source data"
     FIELD_CREATION = "An unexpected error occurred while creating a field"
+    TYPE_VALIDATION = "Field type validation failed"
 
 
 @dataclass
@@ -45,17 +46,17 @@ class ErrorList:
     def __repr__(self) -> str:
         return repr(self.errors)
 
-    def items(self):
+    def items(self) -> Iterable[tuple[ErrorType, list[ErrorDetails]]]:
         return self.errors.items()
 
-    def keys(self) -> List[ErrorType]:
-        return self.errors.keys()
+    def keys(self) -> list[ErrorType]:
+        return list(self.errors.keys())
 
-    def get(self, error_type: ErrorType) -> List[ErrorDetails]:
+    def get(self, error_type: ErrorType) -> Optional[list[ErrorDetails]]:
         return self.errors.get(error_type)
 
-    def values(self) -> List[List[ErrorDetails]]:
-        return self.errors.values()
+    def values(self) -> list[list[ErrorDetails]]:
+        return list(self.errors.values())
 
     def add(self, error_type: ErrorType, error_details: ErrorDetails) -> None:
         """Adds a mapping error to the error list with context"""
@@ -184,7 +185,7 @@ class ErrorManager:
         self.formatter = ErrorFormatter()
 
     @property
-    def errors(self):
+    def errors(self) -> ErrorList:
         return self.error_list
 
     def has_errors(self) -> bool:
@@ -217,12 +218,14 @@ class ErrorManager:
         self.error_list.add(ErrorType.REQUIRED_FIELD, new_error)
 
     def validate_type(
-        self, target_path: str, target_type: str, source_value: str, source_type: str
+        self, target_path: str, target_type: type, source_value: Any, source_type: type
     ) -> None:
         if self.is_valid_type(source_value, target_type):
             return
 
-        self.add_validation_error(target_path, target_type, source_value, source_type)
+        self.add_validation_error(
+            target_path, target_type, str(source_value), source_type
+        )
 
     def new_model_partial(self, field_path: str, new_model_name: str) -> None:
         error_message = self.formatter.partial_detail(new_model_name)
@@ -254,15 +257,25 @@ class ErrorManager:
         self.error_list.remove(ErrorType.REQUIRED_FIELD)
         self.error_list.add(ErrorType.EMPTY_MODEL, new_error)
 
+    def type_error(self, error: Exception) -> None:
+        """Logs model type validation errors"""
+        field_path = self._path_manager.get_path("target")
+        error_details = ErrorDetails(
+            field_path=field_path,
+            error_type=ErrorType.TYPE_VALIDATION,
+            details=f"Type mismatch: {str(error)}",
+        )
+        self.error_list.add(ErrorType.TYPE_VALIDATION, error_details)
+
     def last_available_index(self) -> None:
         self.error_list.remove(ErrorType.EMPTY_MODEL)
 
     def add_validation_error(
-        self, field_path: str, target_type: str, source_value: str, source_type: str
+        self, field_path: str, target_type: type, source_value: str, source_type: type
     ) -> None:
         field_name = field_path.split(".")[-1]
         error_message = self.formatter.validation_detail(
-            field_name, target_type, source_value, source_type
+            field_name, target_type.__name__, source_value, source_type.__name__
         )
         new_error = ErrorDetails(
             field_path=field_path,
@@ -276,9 +289,9 @@ class ErrorManager:
     ) -> bool:
         """Checks if a value can be coerced to a type."""
 
-        class TempModel(BaseModel):
-            model_config = ConfigDict(strict=strict)
-            field: target_type  # I get a warning because types shouldn't been variables
+        TempModel = create_model(
+            "TempModel", field=(target_type, ...), __config__=ConfigDict(strict=strict)
+        )
 
         try:
             TempModel(field=source_value)
