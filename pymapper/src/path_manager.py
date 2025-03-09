@@ -1,3 +1,12 @@
+"""
+path_manager.py
+===============
+
+This module provides the `DynamicPathManager` class to handle
+dynamic path tracking during data mapping operations.
+
+"""
+
 from contextlib import contextmanager
 from typing import Tuple, Union, Generator, cast
 
@@ -44,9 +53,6 @@ class DynamicPathManager:
         Args:
             path_identifier: Unique identifier for the path type
             model_name: Associated model name for path formatting
-
-        Raises:
-            ValueError: If path type already exists
         """
         if self._is_valid_path(path_identifier):
             self._logger.warning("Path type '%s' already exists.", path_identifier)
@@ -66,7 +72,8 @@ class DynamicPathManager:
             segment: Path segment to append (e.g., "field_name" or "[0]")
 
         Raises:
-            ValueError: If path_identifier is not recognized or trying to add list index without a preceding segment
+            UnknownPathTypeException: If path_identifier is not recognized
+            InvalidPathSegmentError: If trying to add list index without a preceding segment
 
         Example:
             >>> with tracker.track_segment("source", "user"):
@@ -93,7 +100,7 @@ class DynamicPathManager:
             str: Full path including model name and all segments
 
         Raises:
-            ValueError: If path_identifier is not recognized
+            UnknownPathTypeException: If path_identifier is not recognized
         """
         self._validate_path_exists(path_identifier)
         entry = self._path_registry[path_identifier]

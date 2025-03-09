@@ -1,3 +1,12 @@
+"""
+field_meta_data.py
+==================
+
+This module provides functionality for analyzing and
+storing metadata about fields in Pydantic models.
+
+"""
+
 from dataclasses import dataclass
 from typing import Any, Type, Optional, Union
 from pydantic import BaseModel

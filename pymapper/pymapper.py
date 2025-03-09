@@ -12,6 +12,7 @@ from .src.exceptions import MappingError, NoMappableData
 # TODO: add type aliases like ModelType = Type[BaseModel]
 # TODO: add support for the return of a serialized dict
 # TODO: add get_origin for precise validation
+# TODO: add errors and cache properties
 
 
 class PyMapper:
@@ -178,7 +179,10 @@ class PyMapper:
                 except Exception as e:
                     self.error_manager.error_creating_field(e)
 
-        if nested_data:  # can I simplify this try block? First check if there were validation errors in the level and act accordingly
+        # can I simplify this try block?
+        # First check if there were validation errors in the level
+        # and act accordingly
+        if nested_data:
             try:
                 self._logger.debug("✅ New model created for: %s", target_path)
                 return new_model_type(**nested_data)
@@ -244,8 +248,10 @@ class PyMapper:
                         field_meta_data.model_type_safe,
                     )
 
-                    # The last model will be empty, because the index won't exists in the source.
-                    # I have to remove the error created in the "_handle_new_model" method
+                    # The last model will be empty,
+                    # because the index won't exists in the source.
+                    # I have to remove the error created
+                    # in the "_handle_new_model" method
                     if model is None:
                         if list_of_models:  # or index > 0, same thing
                             self.error_manager.last_available_index()
@@ -294,14 +300,15 @@ class PyMapper:
             return mapped_data
 
         # Try to return the mapped data
-        # TODO: revisar antes si hay un mismatch con los aliases
+        # TODO: check for alias mismatches
         try:
             result = target(**mapped_data)
-            self._logger.info("🎉 Successfully created target model instance")
+            self._logger.info("🎉 Data successfully mapped to '%s'.", self._target_name)
             return result
         except Exception as error:
             self._logger.error(
-                "💥 Cannot create the '%s' model due to the error: %s. >>> Returning the mapped data from '%s'.",
+                "💥 Cannot create the '%s' model due to the error: %s."
+                ">>> Returning the mapped data from '%s'.",
                 self._target_name,
                 error,
                 self._source_name,

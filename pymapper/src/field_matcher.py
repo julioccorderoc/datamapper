@@ -1,5 +1,5 @@
-from pydantic import BaseModel
 from typing import Type, List, Any  # , Optional
+from pydantic import BaseModel
 
 from .error_manager import ErrorManager
 from .field_cache import FieldCache
@@ -17,7 +17,7 @@ class FieldMatcher:
         match_by_alias: bool = True,
         max_iteration: int = 100,
     ):
-        self.logger = logger
+        self._logger = logger
         self._max_iter_list_new_model = max_iteration
         self._match_by_alias = match_by_alias
         self._path_manager = path_manager
@@ -69,7 +69,7 @@ class FieldMatcher:
                             value_matched,
                             type(value_matched),
                         )
-                        self.logger.debug(
+                        self._logger.debug(
                             "🔍 Source field: '%s' matched with target field: '%s'",
                             source_path,
                             target_path,
@@ -132,46 +132,3 @@ class FieldMatcher:
 
     # # TODO: use a callable to pass the build new model method
     # def _build_list_of_model(
-    #     self, source: BaseModel, field_meta_data: FieldMetaData
-    # ) -> Optional[List[BaseModel]]:
-    #     """Attempts to build list of models from scattered data"""
-    #     list_of_models = []
-    #     index = 0
-    #     target_path = self._path_manager.get_path("target")
-    #     self.logger.debug(f"📑 Trying to build list of models for: {target_path}")
-
-    #     while index <= self._max_iter_list_new_model:
-    #         if index == self._max_iter_list_new_model:
-    #             self.logger.warning(
-    #                 f"📑 Reached max iteration to build list of models for: {target_path}"
-    #             )
-
-    #         with self._path_manager.track_segment("target", f"[{index}]"):
-    #             try:
-    #                 model = self._handle_new_model(
-    #                     source,
-    #                     field_meta_data.model_type,
-    #                 )
-
-    #                 # The last model will be empty, because the index won't exists in the source.
-    #                 # I have to remove the error created in the "_handle_new_model" method
-    #                 if model is None:
-    #                     if list_of_models:  # or index > 0, same thing
-    #                         self._error_manager.last_available_index()
-    #                     break
-
-    #                 list_of_models.append(model)
-    #                 index += 1
-
-    #             except (
-    #                 Exception
-    #             ) as e:  # should't this be added to the mapping error list?
-    #                 self.logger.debug(
-    #                     f"⚠️ Stopped building list of models at index {index}: {str(e)}"
-    #                 )
-    #                 break
-
-    #     if list_of_models:
-    #         self.logger.debug(f"✅ List of models built for: {target_path}")
-    #         return list_of_models
-    #     return None

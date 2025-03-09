@@ -22,10 +22,10 @@ dev-dependencies = [
 ]
 
 [tool.black]
-line-length = 88
+line-length = 100
 
 [tool.mypy]
 strict = true
 
 [tool.pylint]
-max-line-length = 88
+max-line-length = 100
