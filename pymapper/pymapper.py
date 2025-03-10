@@ -1,18 +1,31 @@
-from typing import Type, Any, List, Optional, Dict, Union, Sequence
+"""
+pymapper.py
+==============
+
+
+
+"""
+
+from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from .src.path_manager import DynamicPathManager
 from .src.logger_config import logger
 from .src.field_meta_data import FieldMetaData, get_field_meta_data
-from .src.error_manager import ErrorManager
+from .src.error_manager import ErrorManager, ErrorList
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
-from .src.exceptions import MappingError, NoMappableData
+from .src.exceptions import MappingError, NoMappableData, InvalidArguments
+from .src.utils import partial_return
+from .src.types import (
+    DataMapped,
+    ModelType,
+    PyMapperReturnType,
+    MappedModelItem,
+    ModelMappingSequence,
+)
 
-# TODO: add type aliases like ModelType = Type[BaseModel]
-# TODO: add support for the return of a serialized dict
 # TODO: add get_origin for precise validation
-# TODO: add errors and cache properties
 
 
 class PyMapper:
@@ -39,7 +52,15 @@ class PyMapper:
             self._max_iter_list_new_model,
         )
 
-    def _start(self, source: BaseModel, target: Type[BaseModel]) -> None:
+    @property
+    def errors(self) -> ErrorList:
+        return self.error_manager.errors
+
+    @property
+    def cache(self) -> FieldCache:
+        return self._cache
+
+    def _start(self, source: BaseModel, target: ModelType) -> None:
         """Starts the mapper"""
         self._source_name = source.__class__.__name__
         self._target_name = target.__name__
@@ -57,12 +78,17 @@ class PyMapper:
         )
 
     def map_models(
-        self, source: BaseModel, target: Type[BaseModel], serialize: bool = False
-    ) -> Union[BaseModel, Dict[str, Any]]:
+        self, source: BaseModel, target: ModelType, serialize: bool = False
+    ) -> PyMapperReturnType:
         """
         Maps source model instance to target model type
         """
-        # TODO: validate models
+
+        # simplify the second
+        if not isinstance(source, BaseModel):
+            raise InvalidArguments(source.__class__.__name__)
+        elif not isinstance(target, type) or not issubclass(target, BaseModel):
+            raise InvalidArguments(source.__class__.__name__)
 
         self._start(source, target)
 
@@ -74,25 +100,19 @@ class PyMapper:
         except Exception as e:
             raise MappingError(self._source_name, self._target_name, e)
 
-    def _map_model_fields(
-        self, source: BaseModel, target: Type[BaseModel]
-    ) -> Dict[str, Any]:
+    def _map_model_fields(self, source: BaseModel, target: ModelType) -> DataMapped:
         """Maps all fields from source to target model structure"""
-        mapped: dict[str, Any] = {}
+        mapped: DataMapped = {}
 
         for field_name, field_info in target.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
                 try:
                     target_path = self._path_manager.get_path("target")
 
-                    # try:
                     field_meta_data = get_field_meta_data(
                         field_info, self._target_name, target_path
                     )
                     value = self._map_field(source, field_meta_data)
-                    # except InvalidModelTypeError as e:
-                    #     self.error_manager.type_error(e)
-                    #     value = None
 
                     if value is not None:
                         mapped[field_name] = value
@@ -149,29 +169,25 @@ class PyMapper:
         return None
 
     def _handle_new_model(
-        self, source: BaseModel, new_model_type: Type[BaseModel]
-    ) -> Union[BaseModel, dict[str, Any], None]:
+        self, source: BaseModel, new_model_type: ModelType
+    ) -> MappedModelItem:
         """Attempts to map a nested Pydantic model field"""
         target_path = self._path_manager.get_path("target")
         self._logger.debug("📦 Trying model field mapping for: %s", target_path)
 
-        nested_data: dict[str, Any] = {}
+        new_model_mapped: DataMapped = {}
 
-        for nested_field, nested_info in new_model_type.model_fields.items():
-            with self._path_manager.track_segment("target", nested_field):
+        for new_model_field, new_model_info in new_model_type.model_fields.items():
+            with self._path_manager.track_segment("target", new_model_field):
                 try:
-                    # try:
                     nested_meta_data = get_field_meta_data(
-                        nested_info, new_model_type.__name__, target_path
+                        new_model_info, new_model_type.__name__, target_path
                     )
                     nested_value = self._map_field(source, nested_meta_data)
-                    # except InvalidModelTypeError as e:
-                    #     self.error_manager.type_error(e)
-                    #     nested_value = None
 
                     if nested_value is not None:
-                        nested_data[nested_field] = nested_value
-                    elif nested_info.is_required():
+                        new_model_mapped[new_model_field] = nested_value
+                    elif new_model_info.is_required():
                         self.error_manager.required_field(
                             target_path, self._source_name, nested_meta_data.parent_name
                         )
@@ -182,29 +198,26 @@ class PyMapper:
         # can I simplify this try block?
         # First check if there were validation errors in the level
         # and act accordingly
-        if nested_data:
+        if new_model_mapped:
             try:
                 self._logger.debug("✅ New model created for: %s", target_path)
-                return new_model_type(**nested_data)
+                return new_model_type(**new_model_mapped)
             except ValidationError:
                 self.error_manager.new_model_partial(
                     target_path, new_model_type.__name__
                 )
-                return nested_data
+                return new_model_mapped
             except Exception as e:
                 self.error_manager.error_creating_field(e)
                 return None
-        elif not nested_data:
+        elif not new_model_mapped:
             self.error_manager.new_model_empty(target_path, new_model_type.__name__)
 
         return None
 
-    # Using Sequence (not List) for covariance: allows List[BaseModel] to be
-    # assigned to Sequence[Union[BaseModel, Dict]], maintaining type safety
-    # for read operations while allowing flexibility in return types
     def _handle_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> Optional[Sequence[Union[BaseModel, Dict[str, Any]]]]:
+    ) -> ModelMappingSequence:
         """Attempts to map a List[PydanticModel] field"""
         target_path = self._path_manager.get_path("target")
         self._logger.debug("📑 Trying list field mapping for: %s", target_path)
@@ -218,71 +231,23 @@ class PyMapper:
             return list_of_models
 
         # Try to build instances from scattered data
-        built_items = self._build_list_of_model(source, field_meta_data)
+        built_items = self._field_matcher.build_list_of_model(
+            source, field_meta_data, self._handle_new_model
+        )
         if built_items:
             return built_items
 
         return None
 
-    def _build_list_of_model(
-        self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> Optional[List[Union[BaseModel, Dict[str, Any]]]]:
-        """Attempts to build list of models from scattered data"""
-        target_path = self._path_manager.get_path("target")
-        self._logger.debug("📑 Trying to build list of models for: %s", target_path)
-
-        list_of_models: List[Union[BaseModel, Dict[str, Any]]] = []
-        index = 0
-
-        while index <= self._max_iter_list_new_model:
-            if index == self._max_iter_list_new_model:
-                self._logger.warning(
-                    "📑 Reached max iteration to build list of models for: %s",
-                    target_path,
-                )
-
-            with self._path_manager.track_segment("target", f"[{index}]"):
-                try:
-                    model = self._handle_new_model(
-                        source,
-                        field_meta_data.model_type_safe,
-                    )
-
-                    # The last model will be empty,
-                    # because the index won't exists in the source.
-                    # I have to remove the error created
-                    # in the "_handle_new_model" method
-                    if model is None:
-                        if list_of_models:  # or index > 0, same thing
-                            self.error_manager.last_available_index()
-                        break
-
-                    list_of_models.append(model)
-                    index += 1
-
-                except (
-                    Exception
-                ) as e:  # should't this be added to the mapping error list?
-                    self.error_manager.error_creating_field(e)
-                    break
-
-        if list_of_models:
-            self._logger.debug("✅ List of models built for: %s", target_path)
-            return list_of_models
-        return None
-
     def _handle_return(
         self,
-        mapped_data: Dict[str, Any],
-        target: Type[BaseModel],
+        mapped_data: DataMapped,
+        target: ModelType,
         serialize: bool = False,
-    ) -> Union[BaseModel, Dict[str, Any]]:
+    ) -> PyMapperReturnType:
         """
         Handles the return of the mapped data
         """
-        # TODO: add support for the return of a serialized dict
-        if serialize:
-            pass
 
         # Check for no mapped data
         if not mapped_data:
@@ -297,10 +262,10 @@ class PyMapper:
         if self.error_manager.has_errors():
             self.error_manager.display(self._target_name)
             self._logger.error("⚠️ Returning partially mapped data.")
-            return mapped_data
+            return partial_return(mapped_data, serialize)
 
-        # Try to return the mapped data
         # TODO: check for alias mismatches
+        # Try to return the mapped data
         try:
             result = target(**mapped_data)
             self._logger.info("🎉 Data successfully mapped to '%s'.", self._target_name)
@@ -313,7 +278,7 @@ class PyMapper:
                 error,
                 self._source_name,
             )
-            return mapped_data  # TODO: decide if it's better to return incomplete or incorrect data
+            return partial_return(mapped_data, serialize)
 
 
 pymapper = PyMapper()
