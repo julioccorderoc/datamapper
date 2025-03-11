@@ -92,3 +92,14 @@ class InvalidPathSegmentError(PyMapperException):
             f"Path '{path_type}': Cannot add list index without preceding field segment: "
             f"(Segment: '{segment}'). List indices must follow a field segment."
         )
+
+
+class ObjectNotJsonSerializable(PyMapperException):
+    """Raised when an object is not JSON serializable"""
+
+    def __init__(self, object_type: str, error: Exception):
+        self.object_type = object_type
+        self.error = error
+        super().__init__(
+            f"Object of type '{object_type}' is not JSON serializable. Error: {str(error)}"
+        )
