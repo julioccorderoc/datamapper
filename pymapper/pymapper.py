@@ -109,7 +109,9 @@ class PyMapper:
 
                     if value is not None:
                         mapped[field_name] = value
-                    elif field_info.is_required():
+                    elif not field_info.is_required():
+                        mapped[field_name] = value
+                    else:
                         self.error_manager.required_field(
                             target_path, self._source_name, field_meta_data.parent_name
                         )
@@ -180,7 +182,9 @@ class PyMapper:
 
                     if nested_value is not None:
                         new_model_mapped[new_model_field] = nested_value
-                    elif new_model_info.is_required():
+                    elif not new_model_info.is_required():
+                        new_model_mapped[new_model_field] = nested_value
+                    else:
                         self.error_manager.required_field(
                             target_path, self._source_name, nested_meta_data.parent_name
                         )
