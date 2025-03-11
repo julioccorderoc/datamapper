@@ -6,7 +6,7 @@ pymapper.py
 
 """
 
-from typing import Any
+from typing import Optional, Sequence, Any
 from pydantic import BaseModel, ValidationError
 
 from .src.path_manager import DynamicPathManager
@@ -17,13 +17,7 @@ from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.exceptions import MappingError, NoMappableData, InvalidArguments
 from .src.utils import partial_return
-from .src.types import (
-    DataMapped,
-    ModelType,
-    PyMapperReturnType,
-    MappedModelItem,
-    ModelMappingSequence,
-)
+from .src.types import DataMapped, ModelType, PyMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
 
@@ -84,10 +78,9 @@ class PyMapper:
         Maps source model instance to target model type
         """
 
-        # simplify the second
         if not isinstance(source, BaseModel):
             raise InvalidArguments(source.__class__.__name__)
-        elif not isinstance(target, type) or not issubclass(target, BaseModel):
+        elif not issubclass(target, BaseModel):
             raise InvalidArguments(source.__class__.__name__)
 
         self._start(source, target)
@@ -163,8 +156,8 @@ class PyMapper:
                     "✅ Simple field mapping successful for: %s", target_path
                 )
                 return value
-        except Exception as e:  # should't this be added to the mapping error list?
-            self.error_manager.error_creating_field(e)
+        except Exception as error:
+            self.error_manager.error_creating_field(error)
 
         return None
 
@@ -217,8 +210,15 @@ class PyMapper:
 
     def _handle_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> ModelMappingSequence:
-        """Attempts to map a List[PydanticModel] field"""
+    ) -> Optional[Sequence[MappedModelItem]]:
+        """
+        Attempts to map a List[PydanticModel] field
+
+        Uses Sequence in the return instead of List to:
+            - Allow covariance (e.g., accept List[SubModel] as Sequence[BaseModel])
+            - Support both list and tuple return types
+            - Enable lazy evaluation patterns
+        """
         target_path = self._path_manager.get_path("target")
         self._logger.debug("📑 Trying list field mapping for: %s", target_path)
 

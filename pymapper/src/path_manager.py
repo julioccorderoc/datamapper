@@ -8,10 +8,11 @@ dynamic path tracking during data mapping operations.
 """
 
 from contextlib import contextmanager
-from typing import Tuple, Union, Generator, cast
+from typing import Tuple, Generator, cast
 
 from .logger_config import logger
 from .exceptions import UnknownPathTypeException, InvalidPathSegmentError
+from .types import PathRegistryType, PathEntryType
 
 
 class DynamicPathManager:
@@ -42,7 +43,7 @@ class DynamicPathManager:
             ... )
         """
         self._logger = logger
-        self._path_registry: dict[str, dict[str, Union[str, list[str]]]] = {}
+        self._path_registry: PathRegistryType = {}
         for path_type, model_name in path_configs:
             self.create_path_type(path_type, model_name)
 
@@ -121,7 +122,7 @@ class DynamicPathManager:
     def _append_segment(
         self,
         path_identifier: str,
-        registry_entry: dict[str, Union[str, list[str]]],
+        registry_entry: PathEntryType,
         segment: str,
     ) -> None:
         """Segment appending logic"""
@@ -136,9 +137,7 @@ class DynamicPathManager:
         else:
             segments.append(segment)
 
-    def _remove_segment(
-        self, registry_entry: dict[str, Union[str, list[str]]], segment: str
-    ) -> None:
+    def _remove_segment(self, registry_entry: PathEntryType, segment: str) -> None:
         """Extracted segment removal logic"""
         segments = cast(list[str], registry_entry["segments"])
 
