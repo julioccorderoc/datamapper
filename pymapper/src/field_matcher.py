@@ -1,4 +1,12 @@
-from typing import Type, List, Any  # , Optional
+"""
+field_matcher.py
+==============
+
+
+
+"""
+
+from typing import Type, List, Optional, Any
 from pydantic import BaseModel
 
 from .error_manager import ErrorManager
@@ -6,6 +14,7 @@ from .field_cache import FieldCache
 from .field_meta_data import FieldMetaData, get_field_meta_data
 from .path_manager import DynamicPathManager
 from .logger_config import logger
+from .types import NewModelHandler, MappedModelItem
 
 
 class FieldMatcher:
@@ -110,10 +119,10 @@ class FieldMatcher:
         """Finds all instances of a specific model type in source data"""
         instances: List[BaseModel] = []
         with self._path_manager.track_segment("source", ""):
-            self.search_instances(source, model_type, instances)
+            self._search_instances(source, model_type, instances)
         return instances
 
-    def search_instances(
+    def _search_instances(
         self, value: Any, model_type: Type[BaseModel], instances: List[BaseModel]
     ) -> None:
         """Recursively searches for instances of model_type"""
@@ -123,12 +132,57 @@ class FieldMatcher:
         elif isinstance(value, BaseModel):
             for field in value.model_fields:
                 with self._path_manager.track_segment("source", field):
-                    self.search_instances(getattr(value, field), model_type, instances)
+                    self._search_instances(getattr(value, field), model_type, instances)
 
         elif isinstance(value, (list, tuple)):
             for index, item in enumerate(value):
                 with self._path_manager.track_segment("source", f"[{index}]"):
-                    self.search_instances(item, model_type, instances)
+                    self._search_instances(item, model_type, instances)
 
-    # # TODO: use a callable to pass the build new model method
-    # def _build_list_of_model(
+    def build_list_of_model(
+        self,
+        source: BaseModel,
+        field_meta_data: FieldMetaData,
+        new_model_handler: NewModelHandler,
+    ) -> Optional[List[MappedModelItem]]:
+        """Attempts to build list of models from scattered data"""
+        target_path = self._path_manager.get_path("target")
+        self._logger.debug("📑 Trying to build list of models for: %s", target_path)
+
+        list_of_models: List[MappedModelItem] = []
+        index = 0
+
+        while index <= self._max_iter_list_new_model:
+            if index == self._max_iter_list_new_model:
+                self._logger.warning(
+                    "📑 Reached max iteration to build list of models for: %s",
+                    target_path,
+                )
+
+            with self._path_manager.track_segment("target", f"[{index}]"):
+                try:
+                    model = new_model_handler(
+                        source,
+                        field_meta_data.model_type_safe,
+                    )
+
+                    # The last model will be empty,
+                    # because the index won't exists in the source.
+                    # I have to remove the error created
+                    # in the "_handle_new_model" method
+                    if model is None:
+                        if list_of_models:  # or index > 0, same thing
+                            self._error_manager.last_available_index()
+                        break
+
+                    list_of_models.append(model)
+                    index += 1
+
+                except Exception as error:
+                    self._error_manager.error_creating_field(error)
+                    break
+
+        if list_of_models:
+            self._logger.debug("✅ List of models built for: %s", target_path)
+            return list_of_models
+        return None
