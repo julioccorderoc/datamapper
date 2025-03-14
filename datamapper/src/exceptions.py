@@ -2,17 +2,17 @@
 exceptions.py
 =============
 
-This module defines custom exceptions used within the PyMapper framework.
+This module defines custom exceptions used within the datamapper package.
 
 """
 
 
-class PyMapperException(Exception):
-    """Base class for all exceptions raised by PyMapper"""
+class DataMapperException(Exception):
+    """Base class for all exceptions raised by datamapper"""
 
 
-class MappingError(PyMapperException):
-    """Exception raised when an unindentified error happens"""
+class MappingError(DataMapperException):
+    """Raised when an unindentified error happens"""
 
     def __init__(self, source_model_name: str, target_model_name: str, error: Exception):
         self.source_model_name = source_model_name
@@ -23,16 +23,16 @@ class MappingError(PyMapperException):
         )
 
 
-class InvalidArguments(PyMapperException):
-    """Exception raised when invalid arguments are passed"""
+class InvalidArguments(DataMapperException):
+    """Raised when invalid arguments are passed"""
 
     def __init__(self, invalid_model_name: str):
         self.invalid_model_name = invalid_model_name
         super().__init__(f"The '{invalid_model_name}' argument is not valid.")
 
 
-class NoMappableData(PyMapperException):
-    """Exception raised when there's no mappable data"""
+class NoMappableData(DataMapperException):
+    """Raised when there's no mapped data"""
 
     def __init__(self, source_model_name: str, target_model_name: str) -> None:
         self.source_model_name = source_model_name
@@ -42,8 +42,8 @@ class NoMappableData(PyMapperException):
         )
 
 
-class ErrorReturningPartial(PyMapperException):
-    """Exception raised if an unindentified error happens when returning partial data"""
+class ErrorReturningPartial(DataMapperException):
+    """Raised if an unindentified error happens when returning partial data"""
 
     def __init__(self, source_model_name: str, target_model_name: str, error: Exception) -> None:
         self.source_model_name = source_model_name
@@ -54,7 +54,8 @@ class ErrorReturningPartial(PyMapperException):
         )
 
 
-class InvalidModelTypeError(PyMapperException):
+# This is not used
+class InvalidModelTypeError(DataMapperException):
     """Raised when a field requires a specific model type but receives invalid type"""
 
     def __init__(self, field_path: str, expected_type: type, actual_type: type):
@@ -67,8 +68,8 @@ class InvalidModelTypeError(PyMapperException):
         )
 
 
-class UnknownPathTypeException(PyMapperException):
-    """Exception raised when a path type is not recognized"""
+class UnknownPathTypeException(DataMapperException):
+    """Raised when a path type is not recognized on the DynamicPathManager class"""
 
     def __init__(self, path_type: str, available_paths: list[str]):
         self.path_type = path_type
@@ -76,8 +77,8 @@ class UnknownPathTypeException(PyMapperException):
         super().__init__(f"Unknown path type: '{path_type}'. Available types: '{available_paths}'.")
 
 
-class InvalidPathSegmentError(PyMapperException):
-    """Raised when attempting invalid path segment operations"""
+class InvalidPathSegmentError(DataMapperException):
+    """Raised when attempting invalid path segment operations on the DynamicPathManager class"""
 
     def __init__(self, path_type: str, segment: str):
         self.path_type = path_type
@@ -88,8 +89,8 @@ class InvalidPathSegmentError(PyMapperException):
         )
 
 
-class ObjectNotJsonSerializable(PyMapperException):
-    """Raised when an object is not JSON serializable"""
+class ObjectNotJsonSerializable(DataMapperException):
+    """Raised during serialization, if an object is not JSON serializable"""
 
     def __init__(self, object_type: str, error: Exception):
         self.object_type = object_type

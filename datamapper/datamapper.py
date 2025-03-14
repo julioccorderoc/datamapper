@@ -1,5 +1,5 @@
 """
-pymapper.py
+datamapper.py
 ==============
 
 
@@ -17,12 +17,12 @@ from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.exceptions import MappingError, NoMappableData, InvalidArguments
 from .src.utils import partial_return
-from .src.types import DataMapped, ModelType, PyMapperReturnType, MappedModelItem
+from .src.types import DataMapped, ModelType, DataMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
 
 
-class PyMapper:
+class DataMapper:
     """
     Maps data between Pydantic models
     """
@@ -63,15 +63,10 @@ class PyMapper:
         self._path_manager.create_path_type("source", self._source_name)
         self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: protect from errors
-        self._logger.info(
-            "🚀 Starting mapping from '%s' to '%s'.",
-            self._source_name,
-            self._target_name,
-        )
 
     def map_models(
         self, source: BaseModel, target: ModelType, serialize: bool = False
-    ) -> PyMapperReturnType:
+    ) -> DataMapperReturnType:
         """
         Maps source model instance to target model type
         """
@@ -119,8 +114,6 @@ class PyMapper:
 
     def _map_field(self, source: BaseModel, field_meta_data: FieldMetaData) -> Any:
         """Maps a single field through different possible cases"""
-        target_path = self._path_manager.get_path("target")
-        self._logger.debug("⏳ Attempting to map field: %s", target_path)
 
         # Try simple field mapping first
         value = self._handle_simple_field(source, field_meta_data)
@@ -148,7 +141,6 @@ class PyMapper:
         try:
             value = self._field_matcher.get_value(source, target_path, field_meta_data)
             if value is not None:
-                self._logger.debug("✅ Simple field mapping successful for: %s", target_path)
                 return value
         except Exception as error:
             self.error_manager.error_creating_field(error)
@@ -158,7 +150,6 @@ class PyMapper:
     def _handle_new_model(self, source: BaseModel, new_model_type: ModelType) -> MappedModelItem:
         """Attempts to map and construct a nested Pydantic model field."""
         target_path = self._path_manager.get_path("target")
-        self._logger.debug("📦 Trying model field mapping for: %s", target_path)
 
         new_model_mapped = self._build_new_model_mapped(source, new_model_type, target_path)
 
@@ -214,7 +205,6 @@ class PyMapper:
     ) -> Optional[Union[BaseModel, DataMapped]]:
         """Attempts to construct the model instance with proper error handling."""
         try:
-            self._logger.debug("✅ New model created for: %s", target_path)
             return model_type(**mapped_data)
         except ValidationError:
             self.error_manager.new_model_partial(target_path, model_type.__name__)
@@ -234,15 +224,12 @@ class PyMapper:
             - Support both list and tuple return types
             - Enable lazy evaluation patterns
         """
-        target_path = self._path_manager.get_path("target")
-        self._logger.debug("📑 Trying list field mapping for: %s", target_path)
 
         # Try to find direct instances first
         list_of_models = self._field_matcher.find_model_instances(
             source, field_meta_data.model_type_safe
         )
         if list_of_models:
-            self._logger.debug("✅ List of direct instances found for: %s", target_path)
             return list_of_models
 
         # Try to build instances from scattered data
@@ -259,7 +246,7 @@ class PyMapper:
         mapped_data: DataMapped,
         target: ModelType,
         serialize: bool = False,
-    ) -> PyMapperReturnType:
+    ) -> DataMapperReturnType:
         """
         Handles the return of the mapped data
         """
@@ -283,7 +270,6 @@ class PyMapper:
         # Try to return the mapped data
         try:
             result = target(**mapped_data)
-            self._logger.info("🎉 Data successfully mapped to '%s'.", self._target_name)
             return result
         except Exception as error:
             self._logger.error(
@@ -296,5 +282,5 @@ class PyMapper:
             return partial_return(mapped_data, serialize)
 
 
-pymapper = PyMapper()
-map_models = pymapper.map_models
+datamapper = DataMapper()
+map_models = datamapper.map_models

@@ -3,7 +3,7 @@ field_meta_data.py
 ==================
 
 This module provides functionality for analyzing and
-storing metadata about fields in Pydantic models.
+storing metadata about fields in a Pydantic model.
 
 """
 

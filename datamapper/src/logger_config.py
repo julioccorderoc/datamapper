@@ -1,3 +1,10 @@
+"""
+logger_config.py
+==============
+
+
+"""
+
 import os
 import logging
 import inspect
@@ -11,7 +18,7 @@ except ImportError:
 
 
 class ContextualFormatter(logging.Formatter):
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         # Traverse call stack to find the actual calling function
         frame = inspect.currentframe()
         depth = 0
@@ -31,9 +38,9 @@ class ContextualFormatter(logging.Formatter):
         return super().format(record)
 
 
-def _configure_logger() -> logging.Logger:
-    """Configure PyMapper logger with environment-aware settings"""
-    logger = logging.getLogger("PyMapper")
+def configure_logger() -> logging.Logger:
+    """Configure datamapper logger with environment-aware settings"""
+    logger = logging.getLogger("datamapper")
     logger.setLevel(logging.DEBUG)  # Base level for all handlers
     logger.propagate = False  # Prevent root logger interference
 
@@ -43,8 +50,9 @@ def _configure_logger() -> logging.Logger:
     )
 
     # Console handler setup
-    console_level = os.getenv("LOG_LEVEL_PYMAPPER", "ERROR").upper()
-    console_level = getattr(logging, console_level, logging.ERROR)
+    console_level_name = os.getenv("LOG_LEVEL_datamapper", "ERROR").upper()
+    # console_level = os.getenv("LOG_LEVEL_datamapper", "ERROR").upper()
+    console_level = getattr(logging, console_level_name, logging.ERROR)
 
     if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
         console_handler = logging.StreamHandler()
@@ -53,10 +61,11 @@ def _configure_logger() -> logging.Logger:
         logger.addHandler(console_handler)
 
     # File handler setup
-    log_file_path = os.getenv("LOG_FILE_PYMAPPER")
+    log_file_path = os.getenv("LOG_FILE_datamapper")
     if log_file_path:
-        file_level = os.getenv("LOG_FILE_LEVEL_PYMAPPER", "INFO").upper()
-        file_level = getattr(logging, file_level, logging.INFO)
+        file_level_name = os.getenv("LOG_FILE_LEVEL_datamapper", "INFO").upper()
+        # file_level = os.getenv("LOG_FILE_LEVEL_datamapper", "INFO").upper()
+        file_level = getattr(logging, file_level_name, logging.INFO)
 
         os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
@@ -74,4 +83,4 @@ def _configure_logger() -> logging.Logger:
     return logger
 
 
-logger = _configure_logger()
+logger = configure_logger()

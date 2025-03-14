@@ -5,11 +5,6 @@ field_cache.py
 This module provides a `FieldCache` class to manage path tracking during the data mapping process.
 It ensures that each source field is only used once by storing the full source paths that have been matched.
 
-Usage:
-------
-The `FieldCache` class is intended to be used within a data mapping framework to track and manage
-the usage of source fields, ensuring that each field is only used once during the mapping process.
-
 """
 
 from typing import Set

@@ -26,7 +26,7 @@ Type alias for Pydantic model classes (not instances). Used for type hints where
 model classes are expected as parameters or return values.
 """
 
-PyMapperReturnType = Union[BaseModel, DataMapped, str]
+DataMapperReturnType = Union[BaseModel, DataMapped, str]
 """
 Holds the return types of the main mapping method. Can be:
 - Instantiated Pydantic model
@@ -41,7 +41,7 @@ None case for fields that could not be found/created.
 """
 
 NewModelHandler = Callable[
-    [BaseModel, Type[BaseModel]],  # (source, model_type)
+    [BaseModel, ModelType],  # (source, model_type)
     MappedModelItem,
 ]
 """
