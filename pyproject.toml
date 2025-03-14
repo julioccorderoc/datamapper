@@ -1,5 +1,5 @@
 [project]
-name = "pymapper"
+name = "datamapper"
 version = "0.1.0"
 description = "Map data between pydantic models"
 authors = [
