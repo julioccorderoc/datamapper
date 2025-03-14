@@ -124,9 +124,7 @@ class ErrorList:
 
         # Apply path-based filtering to the specific error type's list
         filtered_errors = [
-            error
-            for error in error_list
-            if self._should_keep_error(error, error_type, field_path)
+            error for error in error_list if self._should_keep_error(error, error_type, field_path)
         ]
 
         removed_count = original_count - len(filtered_errors)
@@ -171,9 +169,7 @@ class ErrorFormatter:
     @staticmethod
     def generate_summary(error_list: ErrorList, target_name: str) -> str:
         """Generates a summary report of errors found during mapping."""
-        summary = [
-            f"'{len(error_list)}' error(s) found while mapping '{target_name}':\n"
-        ]
+        summary = [f"'{len(error_list)}' error(s) found while mapping '{target_name}':\n"]
         for error_type, errors in error_list.items():
             summary.append(f"  > {len(errors)} {error_type.name}")
         return "\n".join(summary)
@@ -193,9 +189,7 @@ class ErrorFormatter:
         return "\n".join(details) if details else "No errors found."
 
     @staticmethod
-    def required_detail(
-        field_name: str, source_model_name: str, parent_model_name: str
-    ) -> str:
+    def required_detail(field_name: str, source_model_name: str, parent_model_name: str) -> str:
         """Generates a detailed message for a required field error."""
         message = message = (
             f"The field '{field_name}' is required in the '{parent_model_name}' model"
@@ -204,9 +198,7 @@ class ErrorFormatter:
         return message
 
     @staticmethod
-    def validation_detail(
-        field_name: str, field_type: str, value: str, value_type: str
-    ) -> str:
+    def validation_detail(field_name: str, field_type: str, value: str, value_type: str) -> str:
         """Generates a detailed message for a validation error."""
         message = (
             f"The field '{field_name}' of type '{field_type}' cannot match"
@@ -292,9 +284,7 @@ class ErrorManager:
         if self.is_valid_type(source_value, target_type):
             return
 
-        self.add_validation_error(
-            target_path, target_type, str(source_value), source_type
-        )
+        self.add_validation_error(target_path, target_type, str(source_value), source_type)
 
     def new_model_partial(self, field_path: str, new_model_name: str) -> None:
         """Adds an error indicating that a new model was partially built."""
@@ -358,9 +348,7 @@ class ErrorManager:
         )
         self.error_list.add(ErrorType.VALIDATION, new_error)
 
-    def is_valid_type(
-        self, source_value: Any, target_type: type, strict: bool = False
-    ) -> bool:
+    def is_valid_type(self, source_value: Any, target_type: type, strict: bool = False) -> bool:
         """Checks if a value can be coerced to a type."""
 
         TempModel = create_model(

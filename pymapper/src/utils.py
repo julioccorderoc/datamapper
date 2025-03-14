@@ -26,9 +26,7 @@ def _serializer(object: Any) -> Union[DataMapped, str]:
         raise ObjectNotJsonSerializable(object.__class__.__name__, error)
 
 
-def partial_return(
-    mapped_data: DataMapped, serialize: bool = False
-) -> Union[DataMapped, str]:
+def partial_return(mapped_data: DataMapped, serialize: bool = False) -> Union[DataMapped, str]:
     """Returns mapped data, optionally serialized to a JSON string.
 
     Args:

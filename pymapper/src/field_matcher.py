@@ -92,14 +92,10 @@ class FieldMatcher:
         for nested_name, nested_info in model_to_traverse.model_fields.items():
             with self._path_manager.track_segment("source", nested_name):
                 value = getattr(model_to_traverse, nested_name)
-                nested_meta_data = get_field_meta_data(
-                    nested_info, nested_name, target_path
-                )
+                nested_meta_data = get_field_meta_data(nested_info, nested_name, target_path)
 
                 if nested_meta_data.is_model:
-                    nested_value = self.get_value(
-                        value, field_to_match, field_meta_data
-                    )
+                    nested_value = self.get_value(value, field_to_match, field_meta_data)
                     if nested_value is not None:
                         return nested_value
 

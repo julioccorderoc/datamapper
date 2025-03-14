@@ -62,9 +62,7 @@ class DynamicPathManager:
         self._path_registry[path_identifier] = {"model": model_name, "segments": []}
 
     @contextmanager
-    def track_segment(
-        self, path_identifier: str, segment: str
-    ) -> Generator[None, None, None]:
+    def track_segment(self, path_identifier: str, segment: str) -> Generator[None, None, None]:
         """
         Context manager for tracking path segments for any path type.
 
@@ -130,9 +128,7 @@ class DynamicPathManager:
 
         if self._is_list_index(segment):
             if not segments:
-                raise InvalidPathSegmentError(
-                    path_type=path_identifier, segment=segment
-                )
+                raise InvalidPathSegmentError(path_type=path_identifier, segment=segment)
             segments[-1] += segment
         else:
             segments.append(segment)

@@ -14,9 +14,7 @@ class PyMapperException(Exception):
 class MappingError(PyMapperException):
     """Exception raised when an unindentified error happens"""
 
-    def __init__(
-        self, source_model_name: str, target_model_name: str, error: Exception
-    ):
+    def __init__(self, source_model_name: str, target_model_name: str, error: Exception):
         self.source_model_name = source_model_name
         self.target_model_name = target_model_name
         super().__init__(
@@ -47,9 +45,7 @@ class NoMappableData(PyMapperException):
 class ErrorReturningPartial(PyMapperException):
     """Exception raised if an unindentified error happens when returning partial data"""
 
-    def __init__(
-        self, source_model_name: str, target_model_name: str, error: Exception
-    ) -> None:
+    def __init__(self, source_model_name: str, target_model_name: str, error: Exception) -> None:
         self.source_model_name = source_model_name
         self.target_model_name = target_model_name
         super().__init__(
@@ -77,9 +73,7 @@ class UnknownPathTypeException(PyMapperException):
     def __init__(self, path_type: str, available_paths: list[str]):
         self.path_type = path_type
         self.available_paths = available_paths
-        super().__init__(
-            f"Unknown path type: '{path_type}'. Available types: '{available_paths}'."
-        )
+        super().__init__(f"Unknown path type: '{path_type}'. Available types: '{available_paths}'.")
 
 
 class InvalidPathSegmentError(PyMapperException):

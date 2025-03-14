@@ -56,9 +56,8 @@ class FieldMetaData:
         return self.field_type
 
 
-def get_field_meta_data(
-    field_info: Any, parent_name: str, field_path: str
-) -> FieldMetaData:
+# TODO: validate field_info type
+def get_field_meta_data(field_info: Any, parent_name: str, field_path: str) -> FieldMetaData:
     """
     Analyzes a field's type and returns structured information.
 
@@ -90,9 +89,7 @@ def get_field_meta_data(
     if is_collection and args:
         potential_model_type = args[0]
         # Only set model_type if it's a BaseModel subclass
-        if isinstance(potential_model_type, type) and issubclass(
-            potential_model_type, BaseModel
-        ):
+        if isinstance(potential_model_type, type) and issubclass(potential_model_type, BaseModel):
             model_type = potential_model_type
 
     # Update model type checks with explicit type guards
@@ -103,12 +100,7 @@ def get_field_meta_data(
 
     # Determine if the field is a collection of Pydantic models
     is_collection_of_models = False
-    if (
-        is_collection
-        and args
-        and isinstance(args[0], type)
-        and issubclass(args[0], BaseModel)
-    ):
+    if is_collection and args and isinstance(args[0], type) and issubclass(args[0], BaseModel):
         model_type = args[0]
         is_collection_of_models = True
 
