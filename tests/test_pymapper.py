@@ -1,7 +1,9 @@
 import pytest
+from pydantic import BaseModel
 
-from pymapper import PyMapper, map_models
-from pymapper.src.error_manager import ErrorType
+from datamapper import DataMapper, map_models
+from datamapper.src.error_manager import ErrorType
+from datamapper.src.types import ModelType, DataMapped
 
 from .sources import source_data, address
 
@@ -37,9 +39,8 @@ from .expected import (
 class TestCompleteMapper:
     """Tests for full model mapping functionality."""
 
-    def test_complete_mapping(self):
+    def test_complete_mapping(self) -> None:
         """Verifies that the complete mapping matches the expected result."""
-        # mapper = PyMapper()
         complete_mapping = map_models(source_data, TargetModelOrder)
         assert complete_mapping == expected_target
 
@@ -47,15 +48,13 @@ class TestCompleteMapper:
 class TestFieldMapping:
     """Tests for individual field mapping scenarios."""
 
-    def test_simple_field_match(self):
+    def test_simple_field_match(self) -> None:
         """Tests mapping of a simple field with direct name match."""
-        # mapper = PyMapper()
         simple_field = map_models(address, SimpleAddressTarget)
         assert simple_field == expected_simple_target
 
-    def test_nested_field_match(self):
+    def test_nested_field_match(self) -> None:
         """Tests mapping a field from a nested structure."""
-        # mapper = PyMapper()
         nested_field = map_models(source_data, MetaUserTarget)
         assert nested_field == expected_nested_target
 
@@ -63,9 +62,8 @@ class TestFieldMapping:
 class TestNestedModelCreation:
     """Tests for building new models from scattered fields."""
 
-    def test_build_new_models_from_scattered_fields(self):
+    def test_build_new_models_from_scattered_fields(self) -> None:
         """Tests creation of a new nested model from scattered fields."""
-        # mapper = PyMapper()
         new_model = map_models(address, NestedAddressTarget)
         assert new_model == expected_new_model
 
@@ -73,15 +71,13 @@ class TestNestedModelCreation:
 class TestListHandling:
     """Tests for handling lists of models."""
 
-    def test_list_of_existing_models(self):
+    def test_list_of_existing_models(self) -> None:
         """Tests mapping a list of models that exist in the source."""
-        # mapper = PyMapper()
         result = map_models(source_data, PaymentInfo)
         assert result == payment_info
 
-    def test_list_of_models_with_new_models(self):
+    def test_list_of_models_with_new_models(self) -> None:
         """Tests mapping a list with models that need to be created from fields."""
-        # mapper = PyMapper()
         result = map_models(source_data, CartInfo)
         assert result == cart_info
 
@@ -94,21 +90,21 @@ class TestListHandling:
 class TestErrorCases:
     """Tests for error handling scenarios."""
 
-    def test_field_in_target_not_found_in_source(self):
+    def test_field_in_target_not_found_in_source(self) -> None:
         """Tests handling when a target field doesn't exist in the source."""
         # Should return a dict since it can't fully build the model
         required_field_error = ErrorType.REQUIRED_FIELD
-        mapper = PyMapper()
+        mapper = DataMapper()
         result = mapper.map_models(address, MissingFieldAddress)
         assert isinstance(result, dict)
         assert required_field_error in mapper.error_manager.errors
         assert len(mapper.error_manager.errors) == 1
 
-    def test_field_found_with_different_type(self):
+    def test_field_found_with_different_type(self) -> None:
         """Tests handling when a field exists but has an incompatible type."""
         # Should return a dict with the fields it could map
         validation_error = ErrorType.VALIDATION
-        mapper = PyMapper()
+        mapper = DataMapper()
         result = mapper.map_models(address, TypeErrorAddress)
         assert isinstance(result, dict)
         assert validation_error in mapper.error_manager.errors
@@ -116,11 +112,11 @@ class TestErrorCases:
 
     # def test_new_model_empty(self):
     #     """Tests handling when a new model is empty."""
-    #     mapper = PyMapper()
+    #     mapper = datamapper()
 
     # def test_no_mappable_data(self):
     #     """Tests handling when no mappable data is found."""
-    #     mapper = PyMapper()
+    #     mapper = datamapper()
 
 
 class TestPartialReturns:
@@ -133,13 +129,15 @@ class TestPartialReturns:
             (source_data, PartialListNewCartInfo, expected_list_new_partial),
         ],
     )
-    def test_partial_returns(self, source, target, expected):
+    def test_partial_returns(
+        self, source: BaseModel, target: ModelType, expected: DataMapped
+    ) -> None:
         """
         Parametrized test for partial return scenarios.
         Tests different partial return situations with a single test function.
         """
         partial_return = ErrorType.PARTIAL_RETURN
-        mapper = PyMapper()
+        mapper = DataMapper()
         result = mapper.map_models(source, target)
 
         # Verify the result is a dict (partial mapping)
