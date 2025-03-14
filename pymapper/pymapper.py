@@ -6,7 +6,7 @@ pymapper.py
 
 """
 
-from typing import Optional, Sequence, Any
+from typing import Optional, Sequence, Union, Any
 from pydantic import BaseModel, ValidationError
 
 from .src.path_manager import DynamicPathManager
@@ -35,9 +35,7 @@ class PyMapper:
         self._match_by_alias = match_by_alias
         self._source_name: str = ""
         self._target_name: str = ""
-        self._max_iter_list_new_model = (
-            max_iterations  # Safety limit for list processing
-        )
+        self._max_iter_list_new_model = max_iterations  # Safety limit for list processing
         self._field_matcher = FieldMatcher(
             self._path_manager,
             self.error_manager,
@@ -107,9 +105,7 @@ class PyMapper:
                     )
                     value = self._map_field(source, field_meta_data)
 
-                    if value is not None:
-                        mapped[field_name] = value
-                    elif not field_info.is_required():
+                    if value is not None or not field_info.is_required():
                         mapped[field_name] = value
                     else:
                         self.error_manager.required_field(
@@ -145,72 +141,87 @@ class PyMapper:
 
         return None
 
-    def _handle_simple_field(
-        self, source: BaseModel, field_meta_data: FieldMetaData
-    ) -> Any:
+    def _handle_simple_field(self, source: BaseModel, field_meta_data: FieldMetaData) -> Any:
         """Attempts to map a simple field directly"""
         target_path = self._path_manager.get_path("target")
 
         try:
             value = self._field_matcher.get_value(source, target_path, field_meta_data)
             if value is not None:
-                self._logger.debug(
-                    "✅ Simple field mapping successful for: %s", target_path
-                )
+                self._logger.debug("✅ Simple field mapping successful for: %s", target_path)
                 return value
         except Exception as error:
             self.error_manager.error_creating_field(error)
 
         return None
 
-    def _handle_new_model(
-        self, source: BaseModel, new_model_type: ModelType
-    ) -> MappedModelItem:
-        """Attempts to map a nested Pydantic model field"""
+    def _handle_new_model(self, source: BaseModel, new_model_type: ModelType) -> MappedModelItem:
+        """Attempts to map and construct a nested Pydantic model field."""
         target_path = self._path_manager.get_path("target")
         self._logger.debug("📦 Trying model field mapping for: %s", target_path)
 
-        new_model_mapped: DataMapped = {}
+        new_model_mapped = self._build_new_model_mapped(source, new_model_type, target_path)
 
-        for new_model_field, new_model_info in new_model_type.model_fields.items():
-            with self._path_manager.track_segment("target", new_model_field):
-                try:
-                    nested_meta_data = get_field_meta_data(
-                        new_model_info, new_model_type.__name__, target_path
-                    )
-                    nested_value = self._map_field(source, nested_meta_data)
-
-                    if nested_value is not None:
-                        new_model_mapped[new_model_field] = nested_value
-                    elif not new_model_info.is_required():
-                        new_model_mapped[new_model_field] = nested_value
-                    else:
-                        self.error_manager.required_field(
-                            target_path, self._source_name, nested_meta_data.parent_name
-                        )
-
-                except Exception as e:
-                    self.error_manager.error_creating_field(e)
-
-        # can I simplify this try block?
-        # First check if there were validation errors in the level
-        # and act accordingly
-        if new_model_mapped:
-            try:
-                self._logger.debug("✅ New model created for: %s", target_path)
-                return new_model_type(**new_model_mapped)
-            except ValidationError:
-                self.error_manager.new_model_partial(
-                    target_path, new_model_type.__name__
-                )
-                return new_model_mapped
-            except Exception as e:
-                self.error_manager.error_creating_field(e)
-                return None
-        elif not new_model_mapped:
+        if not new_model_mapped:
             self.error_manager.new_model_empty(target_path, new_model_type.__name__)
+            return None
+
+        return self._construct_model_instance(new_model_mapped, new_model_type, target_path)
+
+    def _build_new_model_mapped(
+        self, source: BaseModel, new_model_type: ModelType, target_path: str
+    ) -> DataMapped:
+        """Builds a dictionary of mapped values for the new model fields."""
+        mapped_data: DataMapped = {}
+
+        for field_name, field_info in new_model_type.model_fields.items():
+            with self._path_manager.track_segment("target", field_name):
+                value = self._process_field(
+                    source, field_info, new_model_type.__name__, target_path
+                )
+                if value is not None:
+                    mapped_data[field_name] = value
+
+        return mapped_data
+
+    def _process_field(
+        self,
+        source: BaseModel,
+        field_info: Any,
+        model_type_name: str,
+        target_path: str,
+    ) -> Optional[Any]:
+        """Processes and maps a single field, handling errors appropriately."""
+        try:
+            meta_data = get_field_meta_data(field_info, model_type_name, target_path)
+            value = self._map_field(source, meta_data)
+
+            if value is not None or not field_info.is_required():
+                return value
+            else:
+                self.error_manager.required_field(
+                    target_path, self._source_name, meta_data.parent_name
+                )
+
+        except Exception as error:
+            self.error_manager.error_creating_field(error)
+            return None
 
         return None
+
+    def _construct_model_instance(
+        self, mapped_data: DataMapped, model_type: ModelType, target_path: str
+    ) -> Optional[Union[BaseModel, DataMapped]]:
+        """Attempts to construct the model instance with proper error handling."""
+        try:
+            self._logger.debug("✅ New model created for: %s", target_path)
+            return model_type(**mapped_data)
+        except ValidationError:
+            self.error_manager.new_model_partial(target_path, model_type.__name__)
+            return mapped_data
+        except Exception as error:
+            self.error_manager.error_creating_field(error)
+            return None
 
     def _handle_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
@@ -276,7 +287,7 @@ class PyMapper:
             return result
         except Exception as error:
             self._logger.error(
-                "💥 Cannot create the '%s' model due to the error: %s."
+                "💥 Cannot create the '%s' model due to the error: %s. "
                 ">>> Returning the mapped data from '%s'.",
                 self._target_name,
                 error,
