@@ -13,19 +13,48 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = [
-    "black>=25.1.0",
     "dotenv>=0.9.9",
-    "flake8>=7.1.2",
     "mypy>=1.15.0",
-    "pylint>=3.3.4",
     "pytest>=8.3.5",
+    "ruff>=0.10.0",
 ]
-
-[tool.black]
-line-length = 100
 
 [tool.mypy]
 strict = true
 
-[tool.pylint]
-max-line-length = 100
+[tool.ruff]
+line-length = 100
+
+[format]
+quote-style = "double"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
