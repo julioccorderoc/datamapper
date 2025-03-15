@@ -87,6 +87,7 @@ class TestListHandling:
     #     assert result.root_list == ExpectedRootListTarget.root_list
 
 
+# TODO: use the errors property
 class TestErrorCases:
     """Tests for error handling scenarios."""
 
