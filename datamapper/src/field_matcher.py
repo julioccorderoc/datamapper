@@ -6,7 +6,7 @@ field_matcher.py
 
 """
 
-from typing import Type, List, Optional, Any
+from typing import Type, List, Optional, Iterable, Any
 from pydantic import BaseModel
 
 from .error_manager import ErrorManager
@@ -57,57 +57,82 @@ class FieldMatcher:
 
     def traverse_model(
         self,
-        model_to_traverse: Any,  # Should this be a BaseModel?
+        model_to_traverse: BaseModel,
         field_to_match: str,
         field_meta_data: FieldMetaData,
     ) -> Any:
+        """Traverse model hierarchy to find matching field value."""
+
+        # Direct match attempt
+        direct_value = self._try_direct_match(model_to_traverse, field_to_match, field_meta_data)
+        if direct_value is not None:
+            return direct_value
+
+        # Nested structure search
+        return self._traverse_nested_structures(model_to_traverse, field_to_match, field_meta_data)
+
+    def _try_direct_match(self, model: BaseModel, field_name: str, meta_data: FieldMetaData) -> Any:
+        """Attempt to find value through direct field access."""
+        if not hasattr(model, field_name):
+            return None
+
+        value = getattr(model, field_name)
+        if value is None:
+            return None  # TODO: Decide policy for None values - propagate or consider not found?
+
+        with self._path_manager.track_segment("source", field_name):
+            source_path = self._path_manager.get_path("source")
+            if self._cache.is_cached(source_path):
+                return None
+
+            self._validate_and_cache(value, meta_data, source_path)
+            return value
+
+    def _traverse_nested_structures(
+        self, model: BaseModel, field_to_match: str, meta_data: FieldMetaData
+    ) -> Any:
+        """Coordinate search through nested models and collections."""
         target_path = self._path_manager.get_path("target")
-        # validar si es necesario o se cambia por el field meta data, el asunto es que este perderia contexto cada vez que agrego algo al path
+        for field_name, field_info in model.model_fields.items():
+            with self._path_manager.track_segment("source", field_name):
+                nested_value = getattr(model, field_name)
+                nested_meta = get_field_meta_data(field_info, field_name, target_path)
 
-        if hasattr(model_to_traverse, field_to_match):
-            value_matched = getattr(
-                model_to_traverse, field_to_match
-            )  # TODO: try block to avoid unexpected exceptions
-            if value_matched is not None:
-                with self._path_manager.track_segment("source", field_to_match):
-                    source_path = self._path_manager.get_path("source")
-                    if not self._cache.is_cached(source_path):
-                        self._error_manager.validate_type(
-                            target_path,
-                            field_meta_data.field_type_safe,
-                            value_matched,
-                            type(value_matched),
-                        )
-                        self._logger.debug(
-                            "🔍 Source field: '%s' matched with target field: '%s'",
-                            source_path,
-                            target_path,
-                        )
-                        self._cache.add(source_path)
-                        return value_matched
-                    # Should I handle the case when it's in the cache?
-            # Should I handle the case when the value is None?
+                if nested_meta.is_model:
+                    found = self._handle_single_model(nested_value, field_to_match, meta_data)
+                elif nested_meta.is_collection_of_models:
+                    found = self._handle_model_collection(nested_value, field_to_match, meta_data)
+                else:
+                    continue
 
-        # Try searching nested structures
-        for nested_name, nested_info in model_to_traverse.model_fields.items():
-            with self._path_manager.track_segment("source", nested_name):
-                value = getattr(model_to_traverse, nested_name)
-                nested_meta_data = get_field_meta_data(nested_info, nested_name, target_path)
-
-                if nested_meta_data.is_model:
-                    nested_value = self.get_value(value, field_to_match, field_meta_data)
-                    if nested_value is not None:
-                        return nested_value
-
-                elif nested_meta_data.is_collection_of_models:
-                    for index, model_in_list in enumerate(value):
-                        with self._path_manager.track_segment("source", f"[{index}]"):
-                            nested_value = self.get_value(
-                                model_in_list, field_to_match, field_meta_data
-                            )
-                            if nested_value is not None:
-                                return nested_value
+                if found is not None:
+                    return found
         return None
+
+    def _handle_single_model(
+        self, model: BaseModel, target_field: str, meta_data: FieldMetaData
+    ) -> Any:
+        """Process single nested model instance."""
+        return self.get_value(model, target_field, meta_data)
+
+    def _handle_model_collection(
+        self, collection: Iterable[BaseModel], target_field: str, meta_data: FieldMetaData
+    ) -> Any:
+        """Process collection of models, searching each element."""
+        for index, model in enumerate(collection):
+            with self._path_manager.track_segment("source", f"[{index}]"):
+                result = self.get_value(model, target_field, meta_data)
+                if result is not None:
+                    return result
+        return None
+
+    def _validate_and_cache(self, value: Any, meta_data: FieldMetaData, source_path: str) -> None:
+        """Centralize validation and caching logic."""
+        target_path = self._path_manager.get_path("target")
+        self._error_manager.validate_type(
+            target_path, meta_data.field_type_safe, value, type(value)
+        )
+        self._cache.add(source_path)
 
     def find_model_instances(
         self, source: BaseModel, model_type: Type[BaseModel]
@@ -142,43 +167,33 @@ class FieldMatcher:
         new_model_handler: NewModelHandler,
     ) -> Optional[List[MappedModelItem]]:
         """Attempts to build list of models from scattered data"""
-        target_path = self._path_manager.get_path("target")
-        self._logger.debug("📑 Trying to build list of models for: %s", target_path)
 
         list_of_models: List[MappedModelItem] = []
         index = 0
 
         while index <= self._max_iter_list_new_model:
             if index == self._max_iter_list_new_model:
-                self._logger.warning(
-                    "📑 Reached max iteration to build list of models for: %s",
-                    target_path,
-                )
+                # handle this with error manager
+                pass
 
             with self._path_manager.track_segment("target", f"[{index}]"):
-                try:
-                    model = new_model_handler(
-                        source,
-                        field_meta_data.model_type_safe,
-                    )
+                model = new_model_handler(
+                    source,
+                    field_meta_data.model_type_safe,
+                )
 
-                    # The last model will be empty,
-                    # because the index won't exists in the source.
-                    # I have to remove the error created
-                    # in the "_handle_new_model" method
-                    if model is None:
-                        if list_of_models:  # or index > 0, same thing
-                            self._error_manager.last_available_index()
-                        break
-
-                    list_of_models.append(model)
-                    index += 1
-
-                except Exception as error:
-                    self._error_manager.error_creating_field(error)
+                # The last model will be empty,
+                # because the index won't exists in the source.
+                # I have to remove the error created
+                # in the "_handle_new_model" method
+                if model is None:
+                    if list_of_models:  # or index > 0, same thing
+                        self._error_manager.last_available_index()
                     break
 
+                list_of_models.append(model)
+                index += 1
+
         if list_of_models:
-            self._logger.debug("✅ List of models built for: %s", target_path)
             return list_of_models
         return None
