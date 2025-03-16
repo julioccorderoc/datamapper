@@ -23,7 +23,6 @@ from collections import defaultdict
 from pydantic import ValidationError, ConfigDict, create_model
 
 from .path_manager import DynamicPathManager
-from .logger_config import logger
 
 
 class ErrorType(Enum):
@@ -52,7 +51,6 @@ class ErrorList:
     def __init__(self, path_manager: DynamicPathManager) -> None:
         """Initializes the ErrorList with a path manager."""
         self.errors: DefaultDict[ErrorType, List[ErrorDetails]] = defaultdict(list)
-        self._logger = logger
         self._path_manager = path_manager
 
     def __len__(self) -> int:
@@ -95,16 +93,7 @@ class ErrorList:
             error_type (ErrorType): The type of error to add.
             error_details (ErrorDetails): The details of the error.
         """
-        field_path = self._path_manager.get_path("target")
-
         self.errors[error_type].append(error_details)
-
-        self._logger.warning(
-            "❌ Error in field '%s': [%s] >>> %s",
-            field_path,
-            error_type.name,
-            error_details.details,
-        )
 
     def remove(self, error_type: ErrorType) -> None:
         """
@@ -133,12 +122,6 @@ class ErrorList:
                 self.errors[error_type] = filtered_errors
             else:  # If no errors are left, remove the key entirely
                 del self.errors[error_type]
-            self._logger.warning(
-                "🗑️ Removed '%s' %s error(s) in path: '%s'",
-                removed_count,
-                error_type.name,
-                field_path,
-            )
 
     def _should_keep_error(
         self, error_details: ErrorDetails, target_type: ErrorType, current_path: str
@@ -192,7 +175,7 @@ class ErrorFormatter:
     def required_detail(field_name: str, source_model_name: str, parent_model_name: str) -> str:
         """Generates a detailed message for a required field error."""
         message = message = (
-            f"The field '{field_name}' is required in the '{parent_model_name}' model"
+            f"The field '{field_name}' is required in the '{parent_model_name}' model "
             f"and could not be matched in the '{source_model_name}' model."
         )
         return message
@@ -201,7 +184,7 @@ class ErrorFormatter:
     def validation_detail(field_name: str, field_type: str, value: str, value_type: str) -> str:
         """Generates a detailed message for a validation error."""
         message = (
-            f"The field '{field_name}' of type '{field_type}' cannot match"
+            f"The field '{field_name}' of type '{field_type}' cannot match "
             f"the value '{value}' of type '{value_type}'"
         )
         return message
@@ -233,7 +216,6 @@ class ErrorManager:
 
     def __init__(self, path_manager: DynamicPathManager) -> None:
         """Initializes the ErrorManager with a path manager."""
-        self._logger = logger
         self._path_manager = path_manager
         self.error_list = ErrorList(self._path_manager)
         self.formatter = ErrorFormatter()
@@ -254,12 +236,11 @@ class ErrorManager:
 
     def display(self, target_model_name: str) -> None:
         """Displays a summary and detailed report of the errors."""
-
         summary = self.formatter.generate_summary(self.error_list, target_model_name)
         details = self.formatter.generate_details(self.error_list)
-        display = f"{summary}\n\n{details}\n"
-
-        self._logger.error(display)
+        disclaimer = "⚠️ Returning partially mapped data."
+        display = f"{summary}\n\n{details}\n\n{disclaimer}\n"
+        print(display)
 
     def required_field(
         self, field_path: str, source_model_name: str, parent_model_name: str
