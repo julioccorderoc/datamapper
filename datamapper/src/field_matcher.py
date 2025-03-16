@@ -2,8 +2,6 @@
 field_matcher.py
 ==============
 
-
-
 """
 
 from typing import Type, List, Optional, Iterable, Any
@@ -11,9 +9,8 @@ from pydantic import BaseModel
 
 from .error_manager import ErrorManager
 from .field_cache import FieldCache
-from .field_meta_data import FieldMetaData, get_field_meta_data
+from .meta_field import FieldMetaData, get_field_meta_data
 from .path_manager import DynamicPathManager
-from .logger_config import logger
 from .types import NewModelHandler, MappedModelItem
 
 
@@ -22,16 +19,12 @@ class FieldMatcher:
         self,
         path_manager: DynamicPathManager,
         error_manager: ErrorManager,
-        cache: FieldCache,
-        match_by_alias: bool = True,
         max_iteration: int = 100,
     ):
-        self._logger = logger
-        self._max_iter_list_new_model = max_iteration
-        self._match_by_alias = match_by_alias
+        self._cache = FieldCache()
         self._path_manager = path_manager
         self._error_manager = error_manager
-        self._cache = cache
+        self._max_iter_list_new_model = max_iteration
 
     def get_value(
         self,
@@ -182,10 +175,7 @@ class FieldMatcher:
                     field_meta_data.model_type_safe,
                 )
 
-                # The last model will be empty,
-                # because the index won't exists in the source.
-                # I have to remove the error created
-                # in the "_handle_new_model" method
+                # Prevented error when no data for next model (empty last).
                 if model is None:
                     if list_of_models:  # or index > 0, same thing
                         self._error_manager.last_available_index()
