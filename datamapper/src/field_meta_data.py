@@ -8,9 +8,8 @@ storing metadata about fields in a Pydantic model.
 """
 
 from dataclasses import dataclass
-from typing import Any, Type, Optional, Union
+from typing import Type, Optional, Union, get_origin, get_args, Any
 from pydantic import BaseModel
-from typing_extensions import get_origin, get_args
 
 
 @dataclass
