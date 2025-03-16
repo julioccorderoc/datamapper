@@ -11,19 +11,15 @@ from typing import Union, Any
 from json import dumps
 from pydantic import BaseModel
 
-from .exceptions import ObjectNotJsonSerializable
 from .types import DataMapped
 
 
 def _serializer(object: Any) -> Union[DataMapped, str]:
     """Serializes a Pydantic model to a JSON string"""
-    try:
-        if isinstance(object, BaseModel):
-            return object.model_dump()  # Convert Pydantic model to dict
-        else:
-            return str(object)
-    except Exception as error:
-        raise ObjectNotJsonSerializable(object.__class__.__name__, error)
+    if isinstance(object, BaseModel):
+        return object.model_dump()  # Convert Pydantic model to dict
+    else:
+        return str(object)
 
 
 def partial_return(mapped_data: DataMapped, serialize: bool = False) -> Union[DataMapped, str]:

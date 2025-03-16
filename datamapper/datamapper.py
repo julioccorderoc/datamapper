@@ -15,11 +15,12 @@ from .src.field_meta_data import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorManager, ErrorList
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
-from .src.exceptions import MappingError, NoMappableData, InvalidArguments
+from .src.exceptions import NoMappableData, InvalidArguments
 from .src.utils import partial_return
 from .src.types import DataMapped, ModelType, DataMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
+# TODO: add report of coverage of the source data in %
 
 
 class DataMapper:
@@ -64,27 +65,24 @@ class DataMapper:
         self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: protect from errors
 
+    def config(self) -> None:
+        """Method to setup the mapper configuration:"""
+        pass
+
     def map_models(
         self, source: BaseModel, target: ModelType, serialize: bool = False
     ) -> DataMapperReturnType:
         """
         Maps source model instance to target model type
         """
-
         if not isinstance(source, BaseModel):
             raise InvalidArguments(source.__class__.__name__)
         elif not issubclass(target, BaseModel):
             raise InvalidArguments(source.__class__.__name__)
 
         self._start(source, target)
-
-        try:
-            mapped_data = self._map_model_fields(source, target)
-
-            return self._handle_return(mapped_data, target, serialize)
-
-        except Exception as e:
-            raise MappingError(self._source_name, self._target_name, e)
+        mapped_data = self._map_model_fields(source, target)
+        return self._handle_return(mapped_data, target, serialize)
 
     def _map_model_fields(self, source: BaseModel, target: ModelType) -> DataMapped:
         """Maps all fields from source to target model structure"""
@@ -92,23 +90,17 @@ class DataMapper:
 
         for field_name, field_info in target.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
-                try:
-                    target_path = self._path_manager.get_path("target")
+                target_path = self._path_manager.get_path("target")
 
-                    field_meta_data = get_field_meta_data(
-                        field_info, self._target_name, target_path
+                field_meta_data = get_field_meta_data(field_info, self._target_name, target_path)
+                value = self._map_field(source, field_meta_data)
+
+                if value is not None or not field_info.is_required():
+                    mapped[field_name] = value
+                else:
+                    self.error_manager.required_field(
+                        target_path, self._source_name, field_meta_data.parent_name
                     )
-                    value = self._map_field(source, field_meta_data)
-
-                    if value is not None or not field_info.is_required():
-                        mapped[field_name] = value
-                    else:
-                        self.error_manager.required_field(
-                            target_path, self._source_name, field_meta_data.parent_name
-                        )
-
-                except Exception as e:
-                    self.error_manager.error_creating_field(e)
 
         return mapped
 
@@ -137,15 +129,8 @@ class DataMapper:
     def _handle_simple_field(self, source: BaseModel, field_meta_data: FieldMetaData) -> Any:
         """Attempts to map a simple field directly"""
         target_path = self._path_manager.get_path("target")
-
-        try:
-            value = self._field_matcher.get_value(source, target_path, field_meta_data)
-            if value is not None:
-                return value
-        except Exception as error:
-            self.error_manager.error_creating_field(error)
-
-        return None
+        value = self._field_matcher.get_value(source, target_path, field_meta_data)
+        return value
 
     def _handle_new_model(self, source: BaseModel, new_model_type: ModelType) -> MappedModelItem:
         """Attempts to map and construct a nested Pydantic model field."""
@@ -183,21 +168,13 @@ class DataMapper:
         target_path: str,
     ) -> Optional[Any]:
         """Processes and maps a single field, handling errors appropriately."""
-        try:
-            meta_data = get_field_meta_data(field_info, model_type_name, target_path)
-            value = self._map_field(source, meta_data)
+        meta_data = get_field_meta_data(field_info, model_type_name, target_path)
+        value = self._map_field(source, meta_data)
 
-            if value is not None or not field_info.is_required():
-                return value
-            else:
-                self.error_manager.required_field(
-                    target_path, self._source_name, meta_data.parent_name
-                )
-
-        except Exception as error:
-            self.error_manager.error_creating_field(error)
-            return None
-
+        if value is not None or not field_info.is_required():
+            return value
+        else:
+            self.error_manager.required_field(target_path, self._source_name, meta_data.parent_name)
         return None
 
     def _construct_model_instance(
@@ -209,9 +186,6 @@ class DataMapper:
         except ValidationError:
             self.error_manager.new_model_partial(target_path, model_type.__name__)
             return mapped_data
-        except Exception as error:
-            self.error_manager.error_creating_field(error)
-            return None
 
     def _handle_list_of_model(
         self, source: BaseModel, field_meta_data: FieldMetaData
@@ -268,18 +242,8 @@ class DataMapper:
 
         # TODO: check for alias mismatches
         # Try to return the mapped data
-        try:
-            result = target(**mapped_data)
-            return result
-        except Exception as error:
-            self._logger.error(
-                "💥 Cannot create the '%s' model due to the error: %s. "
-                ">>> Returning the mapped data from '%s'.",
-                self._target_name,
-                error,
-                self._source_name,
-            )
-            return partial_return(mapped_data, serialize)
+        result = target(**mapped_data)
+        return result
 
 
 datamapper = DataMapper()
