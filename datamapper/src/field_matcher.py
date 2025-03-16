@@ -8,7 +8,7 @@ from typing import Type, List, Optional, Iterable, Any
 from pydantic import BaseModel
 
 
-from .field_cache import FieldCache
+from .field_cache import matched_fields_cache
 from .path_manager import path_manager
 from .error_manager import error_manager
 from .meta_field import FieldMetaData, get_field_meta_data
@@ -17,7 +17,7 @@ from .types import NewModelHandler, MappedModelItem
 
 class FieldMatcher:
     def __init__(self, max_iteration: int = 100):
-        self._cache = FieldCache()
+        self._cache = matched_fields_cache
         self._path_manager = path_manager
         self._error_manager = error_manager
         self._max_iter_list_new_model = max_iteration
