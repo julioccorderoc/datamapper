@@ -10,6 +10,7 @@ storing metadata about fields in a Pydantic model.
 from dataclasses import dataclass
 from typing import Type, Optional, Union, get_origin, get_args, Any
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
 
 @dataclass
@@ -25,7 +26,6 @@ class FieldMetaData:
     field_type: Optional[Type[Any]] = None
     model_type: Optional[Type[BaseModel]] = None
     parent_name: str = ""
-    field_path: str = ""
 
     # model_type_safe: Provides type-safe access to model_type
     # Use after verifying is_model/is_collection_of_models to satisfy mypy
@@ -39,7 +39,7 @@ class FieldMetaData:
         """
         # Ensures model_type exists at runtime
         if self.model_type is None:
-            raise ValueError(f"model_type is None for field {self.field_path}")
+            raise ValueError("Model_type is None")
         return self.model_type
 
     # field_type_safe: Non-optional accessor that ensures type safety
@@ -51,12 +51,12 @@ class FieldMetaData:
         Raises ValueError if field_type is None to catch runtime errors.
         """
         if self.field_type is None:
-            raise ValueError(f"field_type is None for field {self.field_path}")
+            raise ValueError("Field_type is None for field")
         return self.field_type
 
 
 # TODO: validate field_info type
-def get_field_meta_data(field_info: Any, parent_name: str, field_path: str) -> FieldMetaData:
+def get_field_meta_data(field_info: FieldInfo, parent_name: str) -> FieldMetaData:
     """
     Analyzes a field's type and returns structured information.
 
@@ -116,5 +116,4 @@ def get_field_meta_data(field_info: Any, parent_name: str, field_path: str) -> F
         field_type=field_type,
         model_type=model_type,
         parent_name=parent_name,
-        field_path=field_path,
     )

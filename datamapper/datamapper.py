@@ -8,6 +8,7 @@ datamapper.py
 
 from typing import Optional, Sequence, Union, Any
 from pydantic import BaseModel, ValidationError
+from pydantic.fields import FieldInfo
 
 from .src.path_manager import path_manager
 from .src.meta_field import FieldMetaData, get_field_meta_data
@@ -35,7 +36,7 @@ class DataMapper:
     _sort_keys: bool = False
     _indent: int = 4
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._path_manager = path_manager
         self.error_manager = error_manager
         self._field_matcher = FieldMatcher(self._max_iter_list_new_model)
@@ -61,8 +62,8 @@ class DataMapper:
         self._sort_keys = sort_keys
         self._indent = indent
 
-    def _get_config(self) -> tuple:
-        pass
+    def _get_config(self) -> None:
+        return
 
     def _start(self, source: BaseModel, target: ModelType) -> None:
         """Starts the mapper"""
@@ -94,16 +95,14 @@ class DataMapper:
 
         for field_name, field_info in target.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
-                target_path = self._path_manager.get_path("target")
-
-                field_meta_data = get_field_meta_data(field_info, self._target_name, target_path)
+                field_meta_data = get_field_meta_data(field_info, self._target_name)
                 value = self._map_field(source, field_meta_data)
 
                 if value is not None or not field_info.is_required():
                     mapped[field_name] = value
                 else:
                     self.error_manager.required_field(
-                        target_path, self._source_name, field_meta_data.parent_name
+                        self._source_name, field_meta_data.parent_name
                     )
 
         return mapped
@@ -132,63 +131,52 @@ class DataMapper:
 
     def _handle_simple_field(self, source: BaseModel, field_meta_data: FieldMetaData) -> Any:
         """Attempts to map a simple field directly"""
-        target_path = self._path_manager.get_path("target")
-        value = self._field_matcher.get_value(source, target_path, field_meta_data)
+        value = self._field_matcher.get_value(source, field_meta_data)
         return value
 
     def _handle_new_model(self, source: BaseModel, new_model_type: ModelType) -> MappedModelItem:
         """Attempts to map and construct a nested Pydantic model field."""
-        target_path = self._path_manager.get_path("target")
-
-        new_model_mapped = self._build_new_model_mapped(source, new_model_type, target_path)
+        new_model_mapped = self._build_new_model_mapped(source, new_model_type)
 
         if not new_model_mapped:
-            self.error_manager.new_model_empty(target_path, new_model_type.__name__)
+            self.error_manager.new_model_empty(new_model_type.__name__)
             return None
 
-        return self._construct_model_instance(new_model_mapped, new_model_type, target_path)
+        return self._construct_model_instance(new_model_mapped, new_model_type)
 
-    def _build_new_model_mapped(
-        self, source: BaseModel, new_model_type: ModelType, target_path: str
-    ) -> DataMapped:
+    def _build_new_model_mapped(self, source: BaseModel, new_model_type: ModelType) -> DataMapped:
         """Builds a dictionary of mapped values for the new model fields."""
         mapped_data: DataMapped = {}
 
         for field_name, field_info in new_model_type.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
-                value = self._process_field(
-                    source, field_info, new_model_type.__name__, target_path
-                )
+                value = self._process_field(source, field_info, new_model_type.__name__)
                 if value is not None:
                     mapped_data[field_name] = value
 
         return mapped_data
 
     def _process_field(
-        self,
-        source: BaseModel,
-        field_info: Any,
-        model_type_name: str,
-        target_path: str,
+        self, source: BaseModel, field_info: FieldInfo, model_type_name: str
     ) -> Optional[Any]:
         """Processes and maps a single field, handling errors appropriately."""
-        meta_data = get_field_meta_data(field_info, model_type_name, target_path)
+        meta_data = get_field_meta_data(field_info, model_type_name)
         value = self._map_field(source, meta_data)
 
         if value is not None or not field_info.is_required():
             return value
         else:
-            self.error_manager.required_field(target_path, self._source_name, meta_data.parent_name)
+            self.error_manager.required_field(self._source_name, meta_data.parent_name)
         return None
 
     def _construct_model_instance(
-        self, mapped_data: DataMapped, model_type: ModelType, target_path: str
+        self, mapped_data: DataMapped, model_type: ModelType
     ) -> Optional[Union[BaseModel, DataMapped]]:
         """Attempts to construct the model instance with proper error handling."""
         try:
             return model_type(**mapped_data)
         except ValidationError:
-            self.error_manager.new_model_partial(target_path, model_type.__name__)
+            self.error_manager.new_model_partial(model_type.__name__)
             return mapped_data
 
     def _handle_list_of_model(
@@ -239,5 +227,5 @@ class DataMapper:
         return result
 
 
-datamapper = DataMapper()
+datamapper: DataMapper = DataMapper()
 map_models = datamapper.map_models

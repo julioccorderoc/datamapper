@@ -25,7 +25,6 @@ class FieldMatcher:
     def get_value(
         self,
         model_with_value: BaseModel,
-        field_path: str,  # esto se puede simplificar, no se necesita el path_tracker, solo el nombre del campo
         field_meta_data: FieldMetaData,
     ) -> Any:
         """
@@ -35,11 +34,9 @@ class FieldMatcher:
             > List match (e.g., source.list_field[0].nested_field)
             > Alias match (e.g., source.alias_field)
         """
-        # field_path = self._path_manager.get_path("target")
-        path_part = field_path.split(".")[-1]
         current_model = model_with_value  # simplificar esta linea para que sea una sola
         current_model = self.traverse_model(
-            current_model, path_part, field_meta_data
+            current_model, field_meta_data
         )  # cambiar nombre de variable a value
 
         return current_model
@@ -47,21 +44,23 @@ class FieldMatcher:
     def traverse_model(
         self,
         model_to_traverse: BaseModel,
-        field_to_match: str,
         field_meta_data: FieldMetaData,
     ) -> Any:
         """Traverse model hierarchy to find matching field value."""
 
         # Direct match attempt
-        direct_value = self._try_direct_match(model_to_traverse, field_to_match, field_meta_data)
+        direct_value = self._try_direct_match(model_to_traverse, field_meta_data)
         if direct_value is not None:
             return direct_value
 
         # Nested structure search
-        return self._traverse_nested_structures(model_to_traverse, field_to_match, field_meta_data)
+        return self._traverse_nested_structures(model_to_traverse, field_meta_data)
 
-    def _try_direct_match(self, model: BaseModel, field_name: str, meta_data: FieldMetaData) -> Any:
+    def _try_direct_match(self, model: BaseModel, meta_data: FieldMetaData) -> Any:
         """Attempt to find value through direct field access."""
+        field_path = self._path_manager.get_path("target")
+        field_name = field_path.split(".")[-1]
+
         if not hasattr(model, field_name):
             return None
 
@@ -77,20 +76,17 @@ class FieldMatcher:
             self._validate_and_cache(value, meta_data, source_path)
             return value
 
-    def _traverse_nested_structures(
-        self, model: BaseModel, field_to_match: str, meta_data: FieldMetaData
-    ) -> Any:
+    def _traverse_nested_structures(self, model: BaseModel, meta_data: FieldMetaData) -> Any:
         """Coordinate search through nested models and collections."""
-        target_path = self._path_manager.get_path("target")
         for field_name, field_info in model.model_fields.items():
             with self._path_manager.track_segment("source", field_name):
                 nested_value = getattr(model, field_name)
-                nested_meta = get_field_meta_data(field_info, field_name, target_path)
+                nested_meta = get_field_meta_data(field_info, field_name)
 
                 if nested_meta.is_model:
-                    found = self._handle_single_model(nested_value, field_to_match, meta_data)
+                    found = self._handle_single_model(nested_value, meta_data)
                 elif nested_meta.is_collection_of_models:
-                    found = self._handle_model_collection(nested_value, field_to_match, meta_data)
+                    found = self._handle_model_collection(nested_value, meta_data)
                 else:
                     continue
 
@@ -98,19 +94,17 @@ class FieldMatcher:
                     return found
         return None
 
-    def _handle_single_model(
-        self, model: BaseModel, target_field: str, meta_data: FieldMetaData
-    ) -> Any:
+    def _handle_single_model(self, model: BaseModel, meta_data: FieldMetaData) -> Any:
         """Process single nested model instance."""
-        return self.get_value(model, target_field, meta_data)
+        return self.get_value(model, meta_data)
 
     def _handle_model_collection(
-        self, collection: Iterable[BaseModel], target_field: str, meta_data: FieldMetaData
+        self, collection: Iterable[BaseModel], meta_data: FieldMetaData
     ) -> Any:
         """Process collection of models, searching each element."""
         for index, model in enumerate(collection):
             with self._path_manager.track_segment("source", f"[{index}]"):
-                result = self.get_value(model, target_field, meta_data)
+                result = self.get_value(model, meta_data)
                 if result is not None:
                     return result
         return None

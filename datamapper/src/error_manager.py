@@ -201,12 +201,6 @@ class ErrorFormatter:
         message = f"No data found to build the new model '{new_model_name}'."
         return message
 
-    @staticmethod
-    def field_creation_detail(error: Exception) -> str:
-        """Generates a message for an unexpected error during field creation."""
-        message = f"An unexpected error occurred while creating a field: {str(error)}"
-        return message
-
 
 class ErrorManager:
     """
@@ -226,12 +220,7 @@ class ErrorManager:
         return self.error_list
 
     def has_errors(self) -> bool:
-        """
-        Checks if there are any errors in the error list.
-
-        Returns:
-            bool: True if there are errors, False otherwise.
-        """
+        """Returns: True if there are errors, False otherwise."""
         return len(self.error_list) > 0
 
     def display(self, target_model_name: str) -> None:
@@ -242,9 +231,7 @@ class ErrorManager:
         display = f"{summary}\n\n{details}\n\n{disclaimer}\n"
         print(display)
 
-    def required_field(
-        self, field_path: str, source_model_name: str, parent_model_name: str
-    ) -> None:
+    def required_field(self, source_model_name: str, parent_model_name: str) -> None:
         """Adds an error for a required field that is missing."""
         field_path = self._path_manager.get_path("target")
         field_name = field_path.split(".")[-1]
@@ -267,8 +254,9 @@ class ErrorManager:
 
         self.add_validation_error(target_path, target_type, str(source_value), source_type)
 
-    def new_model_partial(self, field_path: str, new_model_name: str) -> None:
+    def new_model_partial(self, new_model_name: str) -> None:
         """Adds an error indicating that a new model was partially built."""
+        field_path = self._path_manager.get_path("target")
         error_message = self.formatter.partial_detail(new_model_name)
         new_error = ErrorDetails(
             field_path=field_path,
@@ -277,19 +265,9 @@ class ErrorManager:
         )
         self.error_list.add(ErrorType.PARTIAL_RETURN, new_error)
 
-    def error_creating_field(self, error: Exception) -> None:
-        """Adds an error for an unexpected error during field creation."""
-        field_path = self._path_manager.get_path("target")
-        error_message = self.formatter.field_creation_detail(error)
-        new_error = ErrorDetails(
-            field_path=field_path,
-            error_type=ErrorType.FIELD_CREATION,
-            details=error_message,
-        )
-        self.error_list.add(ErrorType.FIELD_CREATION, new_error)
-
-    def new_model_empty(self, field_path: str, new_model_name: str) -> None:
+    def new_model_empty(self, new_model_name: str) -> None:
         """Adds an error indicating that no data was found to build a new model."""
+        field_path = self._path_manager.get_path("target")
         error_message = self.formatter.empty_detail(new_model_name)
         new_error = ErrorDetails(
             field_path=field_path,
