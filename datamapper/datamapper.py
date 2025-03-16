@@ -10,8 +10,7 @@ from typing import Optional, Sequence, Union, Any
 from pydantic import BaseModel, ValidationError
 
 from .src.path_manager import DynamicPathManager
-from .src.logger_config import logger
-from .src.field_meta_data import FieldMetaData, get_field_meta_data
+from .src.meta_field import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorManager, ErrorList
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
@@ -20,7 +19,7 @@ from .src.utils import partial_return
 from .src.types import DataMapped, ModelType, DataMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
-# TODO: add report of coverage of the source data in %
+# TODO: add report of coverage of the source data in % in the cache
 
 
 class DataMapper:
@@ -28,20 +27,20 @@ class DataMapper:
     Maps data between Pydantic models
     """
 
-    def __init__(self, match_by_alias: bool = True, max_iterations: int = 100):
-        self._logger = logger
-        self._cache = FieldCache()
+    _source_name: str = ""
+    _target_name: str = ""
+    _max_iter_list_new_model: int = 100  # Safety limit for list processing
+    # add a property for the serialized config
+    _serialize: bool = False
+    _sort_keys: bool = False
+    _indent: int = 4
+
+    def __init__(self):
         self._path_manager = DynamicPathManager()
         self.error_manager = ErrorManager(self._path_manager)
-        self._match_by_alias = match_by_alias
-        self._source_name: str = ""
-        self._target_name: str = ""
-        self._max_iter_list_new_model = max_iterations  # Safety limit for list processing
         self._field_matcher = FieldMatcher(
             self._path_manager,
             self.error_manager,
-            self._cache,
-            self._match_by_alias,
             self._max_iter_list_new_model,
         )
 
@@ -51,27 +50,36 @@ class DataMapper:
 
     @property
     def cache(self) -> FieldCache:
-        return self._cache
+        return self._field_matcher._cache
+
+    def config(
+        self,
+        max_iterations: int = 100,
+        serialize: bool = False,
+        sort_keys: bool = False,
+        indent: int = 4,
+    ) -> None:
+        """Method to setup the mapper configuration:"""
+        self._max_iter_list_new_model = max_iterations
+        self._serialize = serialize
+        self._sort_keys = sort_keys
+        self._indent = indent
+
+    def _get_config(self) -> tuple:
+        pass
 
     def _start(self, source: BaseModel, target: ModelType) -> None:
         """Starts the mapper"""
         self._source_name = source.__class__.__name__
         self._target_name = target.__name__
-        # self._max_iter_list_new_model
-        self._cache.clear()
-        self.error_manager.errors.clear()
+        self.cache.clear()
+        self.errors.clear()
         self._path_manager.clear()
         self._path_manager.create_path_type("source", self._source_name)
         self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: protect from errors
 
-    def config(self) -> None:
-        """Method to setup the mapper configuration:"""
-        pass
-
-    def map_models(
-        self, source: BaseModel, target: ModelType, serialize: bool = False
-    ) -> DataMapperReturnType:
+    def map_models(self, source: BaseModel, target: ModelType) -> DataMapperReturnType:
         """
         Maps source model instance to target model type
         """
@@ -82,7 +90,7 @@ class DataMapper:
 
         self._start(source, target)
         mapped_data = self._map_model_fields(source, target)
-        return self._handle_return(mapped_data, target, serialize)
+        return self._handle_return(mapped_data, target)
 
     def _map_model_fields(self, source: BaseModel, target: ModelType) -> DataMapped:
         """Maps all fields from source to target model structure"""
@@ -215,30 +223,19 @@ class DataMapper:
 
         return None
 
-    def _handle_return(
-        self,
-        mapped_data: DataMapped,
-        target: ModelType,
-        serialize: bool = False,
-    ) -> DataMapperReturnType:
+    def _handle_return(self, mapped_data: DataMapped, target: ModelType) -> DataMapperReturnType:
         """
         Handles the return of the mapped data
         """
 
         # Check for no mapped data
         if not mapped_data:
-            self._logger.critical(
-                "No mappable data found between %s and %s",
-                self._source_name,
-                self._target_name,
-            )
             raise NoMappableData(self._source_name, self._target_name)
 
         # Handle errors if any
         if self.error_manager.has_errors():
             self.error_manager.display(self._target_name)
-            self._logger.error("⚠️ Returning partially mapped data.")
-            return partial_return(mapped_data, serialize)
+            return partial_return(mapped_data, self._serialize)
 
         # TODO: check for alias mismatches
         # Try to return the mapped data
