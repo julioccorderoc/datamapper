@@ -159,3 +159,6 @@ class DynamicPathManager:
         Clears all path types and their associated segments.
         """
         self._path_registry.clear()
+
+
+path_manager = DynamicPathManager()

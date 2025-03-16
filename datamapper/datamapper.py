@@ -9,9 +9,9 @@ datamapper.py
 from typing import Optional, Sequence, Union, Any
 from pydantic import BaseModel, ValidationError
 
-from .src.path_manager import DynamicPathManager
+from .src.path_manager import path_manager
 from .src.meta_field import FieldMetaData, get_field_meta_data
-from .src.error_manager import ErrorManager, ErrorList
+from .src.error_manager import ErrorList, error_manager
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.exceptions import NoMappableData, InvalidArguments
@@ -36,13 +36,9 @@ class DataMapper:
     _indent: int = 4
 
     def __init__(self):
-        self._path_manager = DynamicPathManager()
-        self.error_manager = ErrorManager(self._path_manager)
-        self._field_matcher = FieldMatcher(
-            self._path_manager,
-            self.error_manager,
-            self._max_iter_list_new_model,
-        )
+        self._path_manager = path_manager
+        self.error_manager = error_manager
+        self._field_matcher = FieldMatcher(self._max_iter_list_new_model)
 
     @property
     def errors(self) -> ErrorList:

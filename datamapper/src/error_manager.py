@@ -22,7 +22,7 @@ from typing import Iterable, Optional, Any, List, DefaultDict
 from collections import defaultdict
 from pydantic import ValidationError, ConfigDict, create_model
 
-from .path_manager import DynamicPathManager
+from .path_manager import DynamicPathManager, path_manager
 
 
 class ErrorType(Enum):
@@ -341,3 +341,6 @@ class ErrorManager:
             return True
         except ValidationError:
             return False
+
+
+error_manager = ErrorManager(path_manager)

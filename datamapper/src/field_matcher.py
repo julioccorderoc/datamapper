@@ -7,20 +7,16 @@ field_matcher.py
 from typing import Type, List, Optional, Iterable, Any
 from pydantic import BaseModel
 
-from .error_manager import ErrorManager
+
 from .field_cache import FieldCache
+from .path_manager import path_manager
+from .error_manager import error_manager
 from .meta_field import FieldMetaData, get_field_meta_data
-from .path_manager import DynamicPathManager
 from .types import NewModelHandler, MappedModelItem
 
 
 class FieldMatcher:
-    def __init__(
-        self,
-        path_manager: DynamicPathManager,
-        error_manager: ErrorManager,
-        max_iteration: int = 100,
-    ):
+    def __init__(self, max_iteration: int = 100):
         self._cache = FieldCache()
         self._path_manager = path_manager
         self._error_manager = error_manager
