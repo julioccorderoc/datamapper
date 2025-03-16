@@ -10,6 +10,7 @@ It ensures that each source field is only used once by storing the full source p
 from typing import Set
 
 
+# TODO: save key-value pairs displaying the matches
 class FieldCache:
     """
     Manages path tracking to prevent reusing the same source fields during mapping.
@@ -32,3 +33,6 @@ class FieldCache:
     def clear(self) -> None:
         """Clears the cache."""
         self._cache.clear()
+
+
+matched_fields_cache = FieldCache()
