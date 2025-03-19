@@ -36,7 +36,7 @@ class FieldMetaData(_BaseMetaData):
         parent_name: Name of the class that contains this field
         is_required: Whether the field is required in the model
         is_model: Whether the field type is '**just**' a Pydantic model
-        model_type: If the field is or contains a Pydantic model, this is the model class
+        model_type: The model class | **Type safe only if used after is_model=True**
         is_collection_of_models: Whether the field contains a collection of Pydantic models
         collection_type: the type of the collection, if any
         collection_depth: How deeply nested the collection is (0 = not a collection)
@@ -109,43 +109,39 @@ def _extract_from_optional(type_annotation: Any) -> Any:
 
 
 def _analyze_type_structure(field_type: Any) -> _BaseMetaData:
-    """Analyzes type structure to detect nested Pydantic models in collections."""
-    # Base case
-    type_analysis = _BaseMetaData(
-        model_type=field_type,
-        is_model=True,
-        is_collection_of_models=False,
-        collection_depth=0,
-        collection_type=None,
-    )
+    # Default values for non-model types
+    is_model = False
+    model_type: ModelType = BaseModel  # Use BaseModel as sentinel
+    is_collection_of_models = False
+    collection_depth = 0
+    collection_type = None
 
-    # Direct model type (non-collection case)
+    # Direct Pydantic model case
     if isinstance(field_type, type) and issubclass(field_type, BaseModel):
-        return type_analysis
+        is_model = True
+        model_type = field_type
+    else:
+        origin = get_origin(field_type)
+        args = get_args(field_type)
 
-    # Extract generic type information
-    origin = get_origin(field_type)
-    args = get_args(field_type)
+        # Handle collection types
+        if origin in CollectionTypes and args:
+            inner_analysis = _analyze_type_structure(args[0])
 
-    # Non-collection types
-    if origin not in CollectionTypes or not args:
-        type_analysis.model_type = BaseModel  # None
-        type_analysis.is_model = False
-        return type_analysis
+            is_collection_of_models = (
+                inner_analysis.is_model or inner_analysis.is_collection_of_models
+            )
+            model_type = inner_analysis.model_type
+            collection_depth = 1 + inner_analysis.collection_depth
+            collection_type = origin
 
-    # Analyze first generic argument (standard collection pattern)
-    inner_analysis = _analyze_type_structure(args[0])
-
-    # Handle nested collection depth calculation
-    depth = 1 + inner_analysis.collection_depth
-
-    # Detect if we have model-containing collection at any level
-    has_nested_models = inner_analysis.is_model or inner_analysis.is_collection_of_models
+            # Collections can never be direct models
+            is_model = False
 
     return _BaseMetaData(
-        model_type=inner_analysis.model_type,
-        is_model=False,  # Explicitly false for collections
-        is_collection_of_models=has_nested_models,
-        collection_depth=depth,
-        collection_type=origin,
+        is_model=is_model,
+        model_type=model_type,
+        is_collection_of_models=is_collection_of_models,
+        collection_depth=collection_depth,
+        collection_type=collection_type,
     )
