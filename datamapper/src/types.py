@@ -10,9 +10,14 @@ Python's standard typing module and Pydantic's BaseModel.
 
 """
 
-from typing import Type, Callable, Union, Dict, List, Any
+from typing import Type, Callable, Union, Dict, List, Set, Tuple, Any
 from pydantic import BaseModel
 
+
+CollectionTypes = (list, set, tuple, List, Set, Tuple)
+"""
+Collection types supported by the mapper.
+"""
 
 DataMapped = Dict[str, Any]
 """

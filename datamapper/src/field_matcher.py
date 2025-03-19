@@ -4,7 +4,7 @@ field_matcher.py
 
 """
 
-from typing import Type, List, Optional, Iterable, Any
+from typing import List, Optional, Iterable, Any
 from pydantic import BaseModel
 
 
@@ -73,7 +73,7 @@ class FieldMatcher:
             if self._cache.is_cached(source_path):
                 return None
 
-            self._validate_and_cache(value, meta_data, source_path)
+            self._validate_and_cache(value, meta_data)
             return value
 
     def _traverse_nested_structures(self, model: BaseModel, meta_data: FieldMetaData) -> Any:
@@ -81,7 +81,7 @@ class FieldMatcher:
         for field_name, field_info in model.model_fields.items():
             with self._path_manager.track_segment("source", field_name):
                 nested_value = getattr(model, field_name)
-                nested_meta = get_field_meta_data(field_info, field_name)
+                nested_meta = get_field_meta_data(meta_data.field_name, field_name, field_info)
 
                 if nested_meta.is_model:
                     found = self._handle_single_model(nested_value, meta_data)
@@ -109,45 +109,61 @@ class FieldMatcher:
                     return result
         return None
 
-    def _validate_and_cache(self, value: Any, meta_data: FieldMetaData, source_path: str) -> None:
+    def _validate_and_cache(
+        self, value: Any, meta_data: FieldMetaData, is_instance: bool = False
+    ) -> None:
         """Centralize validation and caching logic."""
+        source_path = self._path_manager.get_path("source")
         target_path = self._path_manager.get_path("target")
-        self._error_manager.validate_type(
-            target_path, meta_data.field_type_safe, value, type(value)
-        )
+
+        # This is for the building lists of existing models
+        # The target_type will be a collection but we want
+        # to validate against what's inside the collection
+        if is_instance:
+            type_to_validate = meta_data.model_type
+        else:
+            type_to_validate = meta_data.field_type
+
+        self._error_manager.validate_type(target_path, type_to_validate, value, type(value))
         self._cache.add(source_path)
 
-    def find_model_instances(
-        self, source: BaseModel, model_type: Type[BaseModel]
-    ) -> List[BaseModel]:
+    def find_model_instances(self, source: BaseModel, meta_data: FieldMetaData) -> List[BaseModel]:
         """Finds all instances of a specific model type in source data"""
+        # FIXME: Not necessarily a list, the type of collection is upon the target model
         instances: List[BaseModel] = []
         with self._path_manager.track_segment("source", ""):
-            self._search_instances(source, model_type, instances)
+            self._search_instances(source, meta_data, instances)
         return instances
 
     def _search_instances(
-        self, value: Any, model_type: Type[BaseModel], instances: List[BaseModel]
+        self, value: Any, meta_data: FieldMetaData, instances: List[BaseModel]
     ) -> None:
         """Recursively searches for instances of model_type"""
-        if isinstance(value, model_type):
+
+        # TODO: avoid fields in the cache
+        # source_path = self._path_manager.get_path("source")
+        # if self._cache.is_cached(source_path):
+        #     return
+
+        if isinstance(value, meta_data.model_type):
+            self._validate_and_cache(value, meta_data, True)
             instances.append(value)
 
         elif isinstance(value, BaseModel):
-            for field in value.model_fields:
+            for field in value.model_fields:  # TODO: just fields that haven't been checked
                 with self._path_manager.track_segment("source", field):
-                    self._search_instances(getattr(value, field), model_type, instances)
+                    self._search_instances(getattr(value, field), meta_data, instances)
 
         elif isinstance(value, (list, tuple)):
-            for index, item in enumerate(value):
+            for index, item in enumerate(value):  # TODO: just fields that haven't been checked
                 with self._path_manager.track_segment("source", f"[{index}]"):
-                    self._search_instances(item, model_type, instances)
+                    self._search_instances(item, meta_data, instances)
 
     def build_list_of_model(
         self,
         source: BaseModel,
         field_meta_data: FieldMetaData,
-        new_model_handler: NewModelHandler,
+        handle_new_model: NewModelHandler,
     ) -> Optional[List[MappedModelItem]]:
         """Attempts to build list of models from scattered data"""
 
@@ -156,13 +172,13 @@ class FieldMatcher:
 
         while index <= self._max_iter_list_new_model:
             if index == self._max_iter_list_new_model:
-                # handle this with error manager
+                # TODO: handle this with error manager
                 pass
 
             with self._path_manager.track_segment("target", f"[{index}]"):
-                model = new_model_handler(
+                model = handle_new_model(
                     source,
-                    field_meta_data.model_type_safe,
+                    field_meta_data.model_type,
                 )
 
                 # Prevented error when no data for next model (empty last).

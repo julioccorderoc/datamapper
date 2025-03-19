@@ -74,7 +74,7 @@ class DataMapper:
         self._path_manager.clear()
         self._path_manager.create_path_type("source", self._source_name)
         self._path_manager.create_path_type("target", self._target_name)
-        target.model_rebuild()  # TODO: protect from errors
+        target.model_rebuild()  # TODO: https://docs.pydantic.dev/latest/concepts/models/#rebuilding-model-schema
 
     def map_models(self, source: BaseModel, target: ModelType) -> DataMapperReturnType:
         """
@@ -95,7 +95,7 @@ class DataMapper:
 
         for field_name, field_info in target.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
-                field_meta_data = get_field_meta_data(field_info, self._target_name)
+                field_meta_data = get_field_meta_data(field_name, self._target_name, field_info)
                 value = self._map_field(source, field_meta_data)
 
                 if value is not None or not field_info.is_required():
@@ -117,7 +117,7 @@ class DataMapper:
 
         # Try creating a new model from scattered data
         if field_meta_data.is_model:
-            value = self._handle_new_model(source, field_meta_data.model_type_safe)
+            value = self._handle_new_model(source, field_meta_data.model_type)
             if value is not None:
                 return value
 
@@ -150,17 +150,17 @@ class DataMapper:
 
         for field_name, field_info in new_model_type.model_fields.items():
             with self._path_manager.track_segment("target", field_name):
-                value = self._process_field(source, field_info, new_model_type.__name__)
+                value = self._process_field(source, field_name, new_model_type.__name__, field_info)
                 if value is not None:
                     mapped_data[field_name] = value
 
         return mapped_data
 
     def _process_field(
-        self, source: BaseModel, field_info: FieldInfo, model_type_name: str
+        self, source: BaseModel, field_name: str, model_type_name: str, field_info: FieldInfo
     ) -> Optional[Any]:
         """Processes and maps a single field, handling errors appropriately."""
-        meta_data = get_field_meta_data(field_info, model_type_name)
+        meta_data = get_field_meta_data(field_name, model_type_name, field_info)
         value = self._map_field(source, meta_data)
 
         if value is not None or not field_info.is_required():
@@ -192,9 +192,7 @@ class DataMapper:
         """
 
         # Try to find direct instances first
-        list_of_models = self._field_matcher.find_model_instances(
-            source, field_meta_data.model_type_safe
-        )
+        list_of_models = self._field_matcher.find_model_instances(source, field_meta_data)
         if list_of_models:
             return list_of_models
 

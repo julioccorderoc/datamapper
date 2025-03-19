@@ -3,117 +3,149 @@ meta_field.py
 ==================
 
 This module provides functionality for analyzing and
-storing metadata about fields in a Pydantic model.
-
+storing metadata about Pydantic model fields.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Type, Optional, Union, get_origin, get_args, Any
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
+from .types import ModelType, CollectionTypes
+
 
 @dataclass
-class FieldMetaData:
+class _BaseMetaData:
+    """Contains the results of the type analysis"""
+
+    is_model: bool
+    model_type: ModelType  # Optional[ModelType]
+    is_collection_of_models: bool
+    collection_type: Optional[Type[Any]]
+    collection_depth: int
+
+
+@dataclass
+class FieldMetaData(_BaseMetaData):
     """
-    Contains field's data.
-    Used as an interface to facilitate the mapping process.
+    Contains metadata about a field in a Pydantic model.
+
+    Attributes:
+        field_name: Name of the field
+        field_type: The Python type of the field
+        parent_name: Name of the class that contains this field
+        is_required: Whether the field is required in the model
+        is_model: Whether the field type is '**just**' a Pydantic model
+        model_type: If the field is or contains a Pydantic model, this is the model class
+        is_collection_of_models: Whether the field contains a collection of Pydantic models
+        collection_type: the type of the collection, if any
+        collection_depth: How deeply nested the collection is (0 = not a collection)
     """
 
-    is_model: bool = False
-    is_collection_of_models: bool = False
-    is_required: bool = False
-    field_type: Optional[Type[Any]] = None
-    model_type: Optional[Type[BaseModel]] = None
-    parent_name: str = ""
-
-    # model_type_safe: Provides type-safe access to model_type
-    # Use after verifying is_model/is_collection_of_models to satisfy mypy
-    @property
-    def model_type_safe(self) -> Type[BaseModel]:
-        """
-        Returns model_type when it's guaranteed to be a valid BaseModel type.
-        Should only be called after checking is_model or is_collection_of_models.
-
-        Raises ValueError if model_type is None to catch runtime errors.
-        """
-        # Ensures model_type exists at runtime
-        if self.model_type is None:
-            raise ValueError("Model_type is None")
-        return self.model_type
-
-    # field_type_safe: Non-optional accessor that ensures type safety
-    # Use when passing to functions requiring a definite type object
-    @property
-    def field_type_safe(self) -> Type[Any]:
-        """
-        Returns field_type when it's guaranteed to be a valid type.
-        Raises ValueError if field_type is None to catch runtime errors.
-        """
-        if self.field_type is None:
-            raise ValueError("Field_type is None for field")
-        return self.field_type
+    field_name: str
+    field_type: Type[Any]
+    parent_name: str
+    is_required: bool
 
 
-# TODO: validate field_info type
-def get_field_meta_data(field_info: FieldInfo, parent_name: str) -> FieldMetaData:
+def get_field_meta_data(field_name: str, parent_name: str, field_info: FieldInfo) -> FieldMetaData:
     """
-    Analyzes a field's type and returns structured information.
+    Analyzes a field's type and returns structured metadata information.
 
     Args:
-        field_info (Any): Field info object from pydantic containing annotation and metadata.
-        parent_name (str): Name of class that contains the field.
-        field_path (str): The path of the field within the model structure.
+        field_name: Name of the field
+        parent_name: Name of class that contains the field
+        field_info: Pydantic V2 FieldInfo object containing annotation and metadata
 
     Returns:
-        FieldMetaData: Structured information about the field's type.
+        FieldMetaData: Structured information about the field's type
     """
-    # Extract the base type from Optional fields
-    field_type = field_info.annotation
+    field_type = _extract_from_optional(field_info.annotation)
+    type_analysis = _analyze_type_structure(field_type)
+
+    field_meta = FieldMetaData(
+        field_name=field_name,
+        field_type=field_type,
+        parent_name=parent_name,
+        is_required=field_info.is_required(),
+        **asdict(type_analysis),
+    )
+
+    return field_meta
+
+
+def _extract_from_optional(type_annotation: Any) -> Any:
+    """Extracts the core type from Optional/Union[..., None] annotations.
+
+    Why this exists: Optional[T] is syntax sugar for Union[T, None]. This unwraps
+    that structure while preserving other Union types unchanged.
+    """
+    # Exit early for non-Union types to avoid unnecessary processing
+    if get_origin(type_annotation) is not Union:
+        return type_annotation
+
+    # Unpack Union components and filter out None type
+    args = get_args(type_annotation)
+    non_none_types = []
+
+    for arg in args:
+        # Skip None type checks - we want actual data types
+        if arg is type(None):
+            continue
+        non_none_types.append(arg)
+
+    # Decision logic with clear exit points
+    if not non_none_types:
+        # Edge case: Union[None, None] - return original
+        return type_annotation
+
+    if len(non_none_types) == 1:
+        # Ideal Optional case: Union[Something, None] → return Something
+        return non_none_types[0]
+
+    # Preserve original Union if multiple non-None types exist
+    # This prevents losing type information in complex cases
+    return type_annotation
+
+
+def _analyze_type_structure(field_type: Any) -> _BaseMetaData:
+    """Analyzes type structure to detect nested Pydantic models in collections."""
+    # Base case
+    type_analysis = _BaseMetaData(
+        model_type=field_type,
+        is_model=True,
+        is_collection_of_models=False,
+        collection_depth=0,
+        collection_type=None,
+    )
+
+    # Direct model type (non-collection case)
+    if isinstance(field_type, type) and issubclass(field_type, BaseModel):
+        return type_analysis
+
+    # Extract generic type information
     origin = get_origin(field_type)
     args = get_args(field_type)
 
-    # Handle Optional types (which are represented as Union[Type, None])
-    if origin is Union and type(None) in args:
-        field_type = next(arg for arg in args if arg is not type(None))
-        # Re-analyze the extracted type
-        origin = get_origin(field_type)
-        args = get_args(field_type)
+    # Non-collection types
+    if origin not in CollectionTypes or not args:
+        type_analysis.model_type = BaseModel  # None
+        type_analysis.is_model = False
+        return type_analysis
 
-    # Determine if the field is a collection (list, set, tuple)
-    is_collection = origin in (list, set, tuple)
+    # Analyze first generic argument (standard collection pattern)
+    inner_analysis = _analyze_type_structure(args[0])
 
-    # Extract model_type from collections
-    model_type = None
-    if is_collection and args:
-        potential_model_type = args[0]
-        # Only set model_type if it's a BaseModel subclass
-        if isinstance(potential_model_type, type) and issubclass(potential_model_type, BaseModel):
-            model_type = potential_model_type
+    # Handle nested collection depth calculation
+    depth = 1 + inner_analysis.collection_depth
 
-    # Update model type checks with explicit type guards
-    is_model = False
-    if isinstance(field_type, type) and issubclass(field_type, BaseModel):
-        model_type = field_type
-        is_model = True
+    # Detect if we have model-containing collection at any level
+    has_nested_models = inner_analysis.is_model or inner_analysis.is_collection_of_models
 
-    # Determine if the field is a collection of Pydantic models
-    is_collection_of_models = False
-    if is_collection and args and isinstance(args[0], type) and issubclass(args[0], BaseModel):
-        model_type = args[0]
-        is_collection_of_models = True
-
-    # Handles potential non-Pydantic field info objects
-    try:
-        is_required = field_info.is_required()
-    except AttributeError:
-        is_required = False
-
-    return FieldMetaData(
-        is_model=is_model,
-        is_collection_of_models=is_collection_of_models,
-        is_required=is_required,
-        field_type=field_type,
-        model_type=model_type,
-        parent_name=parent_name,
+    return _BaseMetaData(
+        model_type=inner_analysis.model_type,
+        is_model=False,  # Explicitly false for collections
+        is_collection_of_models=has_nested_models,
+        collection_depth=depth,
+        collection_type=origin,
     )
