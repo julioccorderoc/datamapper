@@ -129,17 +129,15 @@ class FieldMatcher:
 
     def find_model_instances(self, source: BaseModel, meta_data: FieldMetaData) -> List[BaseModel]:
         """Finds all instances of a specific model type in source data"""
-        # FIXME: Not necessarily a list, the type of collection is upon the target model
+        # FIXME: Not necessarily a list, the type of collection is defined by the target model
         instances: List[BaseModel] = []
-        with self._path_manager.track_segment("source", ""):
-            self._search_instances(source, meta_data, instances)
+        self._search_instances(source, meta_data, instances)
         return instances
 
     def _search_instances(
         self, value: Any, meta_data: FieldMetaData, instances: List[BaseModel]
     ) -> None:
         """Recursively searches for instances of model_type"""
-
         # TODO: avoid fields in the cache
         # source_path = self._path_manager.get_path("source")
         # if self._cache.is_cached(source_path):
@@ -157,7 +155,8 @@ class FieldMatcher:
         elif isinstance(value, (list, tuple)):
             for index, item in enumerate(value):  # TODO: just fields that haven't been checked
                 with self._path_manager.track_segment("source", f"[{index}]"):
-                    self._search_instances(item, meta_data, instances)
+                    with self._path_manager.track_segment("target", f"[{index}]"):
+                        self._search_instances(item, meta_data, instances)
 
     def build_list_of_model(
         self,
