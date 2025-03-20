@@ -6,12 +6,40 @@ authors = [
   { name = "Julio Cordero", email = "julioccorderoc@gmail.com" }
 ]
 readme = "README.md"
-keywords = ["data", "mapping", "pydantic", "model"]
-license = "MIT"
 requires-python = ">=3.13"
+keywords = ["data", "mapping", "pydantic", "model"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+
+    "Programming Language :: Python",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    
+    "Framework :: Pydantic",
+    "Framework :: Pytest",
+    
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: File Formats :: JSON",
+    "Topic :: Software Development :: Object Brokering",
+
+    "Natural Language :: English",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+
 dependencies = [
     "pydantic>=2.10.6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/julioccorderoc/datamapper"
+Issues = "https://github.com/julioccorderoc/datamapper/issues"
+Source = "https://github.com/julioccorderoc/datamapper"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [
