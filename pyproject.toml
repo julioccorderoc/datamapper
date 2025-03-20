@@ -1,5 +1,5 @@
 [project]
-name = "datamapper"
+name = "modelmappy"
 version = "0.1.0"
 description = "Map data between pydantic models"
 authors = [
@@ -48,6 +48,7 @@ dev-dependencies = [
     "mypy>=1.15.0",
     "pytest>=8.3.5",
     "ruff>=0.10.0",
+    "twine>=6.1.0",
 ]
 
 [tool.mypy]
