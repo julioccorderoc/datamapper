@@ -50,8 +50,8 @@ def configure_logger() -> logging.Logger:
     )
 
     # Console handler setup
-    console_level_name = os.getenv("LOG_LEVEL_datamapper", "ERROR").upper()
-    # console_level = os.getenv("LOG_LEVEL_datamapper", "ERROR").upper()
+    console_level_name = os.getenv("LOG_LEVEL_pydamapper", "ERROR").upper()
+    # console_level = os.getenv("LOG_LEVEL_pydamapper", "ERROR").upper()
     console_level = getattr(logging, console_level_name, logging.ERROR)
 
     if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
@@ -61,10 +61,10 @@ def configure_logger() -> logging.Logger:
         logger.addHandler(console_handler)
 
     # File handler setup
-    log_file_path = os.getenv("LOG_FILE_datamapper")
+    log_file_path = os.getenv("LOG_FILE_pydamapper")
     if log_file_path:
-        file_level_name = os.getenv("LOG_FILE_LEVEL_datamapper", "INFO").upper()
-        # file_level = os.getenv("LOG_FILE_LEVEL_datamapper", "INFO").upper()
+        file_level_name = os.getenv("LOG_FILE_LEVEL_pydamapper", "INFO").upper()
+        # file_level = os.getenv("LOG_FILE_LEVEL_pydamapper", "INFO").upper()
         file_level = getattr(logging, file_level_name, logging.INFO)
 
         os.makedirs(os.path.dirname(log_file_path), exist_ok=True)

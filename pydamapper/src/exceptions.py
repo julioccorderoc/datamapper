@@ -7,11 +7,11 @@ This module defines custom exceptions used within the pydamapper package.
 """
 
 
-class DataMapperException(Exception):
+class PyDaMapperException(Exception):
     """Base class for all exceptions raised by pydamapper"""
 
 
-class MappingError(DataMapperException):
+class MappingError(PyDaMapperException):
     """Raised when an unindentified error happens"""
 
     def __init__(self, source_model_name: str, target_model_name: str, error: Exception):
@@ -23,7 +23,7 @@ class MappingError(DataMapperException):
         )
 
 
-class InvalidArguments(DataMapperException):
+class InvalidArguments(PyDaMapperException):
     """Raised when invalid arguments are passed"""
 
     def __init__(self, invalid_model_name: str):
@@ -31,7 +31,7 @@ class InvalidArguments(DataMapperException):
         super().__init__(f"The '{invalid_model_name}' argument is not valid.")
 
 
-class NoMappableData(DataMapperException):
+class NoMappableData(PyDaMapperException):
     """Raised when there's no mapped data"""
 
     def __init__(self, source_model_name: str, target_model_name: str) -> None:
@@ -42,7 +42,7 @@ class NoMappableData(DataMapperException):
         )
 
 
-class ErrorReturningPartial(DataMapperException):
+class ErrorReturningPartial(PyDaMapperException):
     """Raised if an unindentified error happens when returning partial data"""
 
     def __init__(self, source_model_name: str, target_model_name: str, error: Exception) -> None:
@@ -55,7 +55,7 @@ class ErrorReturningPartial(DataMapperException):
 
 
 # This is not used
-class InvalidModelTypeError(DataMapperException):
+class InvalidModelTypeError(PyDaMapperException):
     """Raised when a field requires a specific model type but receives invalid type"""
 
     def __init__(self, field_path: str, expected_type: type, actual_type: type):
@@ -68,7 +68,7 @@ class InvalidModelTypeError(DataMapperException):
         )
 
 
-class UnknownPathTypeException(DataMapperException):
+class UnknownPathTypeException(PyDaMapperException):
     """Raised when a path type is not recognized on the DynamicPathManager class"""
 
     def __init__(self, path_type: str, available_paths: list[str]):
@@ -77,7 +77,7 @@ class UnknownPathTypeException(DataMapperException):
         super().__init__(f"Unknown path type: '{path_type}'. Available types: '{available_paths}'.")
 
 
-class InvalidPathSegmentError(DataMapperException):
+class InvalidPathSegmentError(PyDaMapperException):
     """Raised when attempting invalid path segment operations on the DynamicPathManager class"""
 
     def __init__(self, path_type: str, segment: str):
@@ -89,7 +89,7 @@ class InvalidPathSegmentError(DataMapperException):
         )
 
 
-class ObjectNotJsonSerializable(DataMapperException):
+class ObjectNotJsonSerializable(PyDaMapperException):
     """Raised during serialization, if an object is not JSON serializable"""
 
     def __init__(self, object_type: str, error: Exception):

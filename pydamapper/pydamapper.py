@@ -17,7 +17,7 @@ from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.exceptions import NoMappableData, InvalidArguments
 from .src.utils import partial_return
-from .src.types import DataMapped, ModelType, DataMapperReturnType, MappedModelItem
+from .src.types import DataMapped, ModelType, PyDaMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
 # TODO: add report of coverage of the source data in % in the cache
@@ -76,7 +76,7 @@ class PyDaMapper:
         self._path_manager.create_path_type("target", self._target_name)
         target.model_rebuild()  # TODO: https://docs.pydantic.dev/latest/concepts/models/#rebuilding-model-schema
 
-    def map_models(self, source: BaseModel, target: ModelType) -> DataMapperReturnType:
+    def map_models(self, source: BaseModel, target: ModelType) -> PyDaMapperReturnType:
         """
         Maps source model instance to target model type
         """
@@ -204,7 +204,7 @@ class PyDaMapper:
 
         return None
 
-    def _handle_return(self, mapped_data: DataMapped, target: ModelType) -> DataMapperReturnType:
+    def _handle_return(self, mapped_data: DataMapped, target: ModelType) -> PyDaMapperReturnType:
         """
         Handles the return of the mapped data
         """

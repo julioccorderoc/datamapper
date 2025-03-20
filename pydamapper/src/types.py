@@ -31,7 +31,7 @@ Type alias for Pydantic model classes (not instances). Used for type hints where
 model classes are expected as parameters or return values.
 """
 
-DataMapperReturnType = Union[BaseModel, DataMapped, str]
+PyDaMapperReturnType = Union[BaseModel, DataMapped, str]
 """
 Holds the return types of the main mapping method. Can be:
 - Instantiated Pydantic model
