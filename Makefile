@@ -6,7 +6,7 @@ setup:
 
 test: # tests and coverage
 	@echo "🚀 Running tests"
-	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=html tests
+	@uv run pytest --cov --cov-config=pyproject.toml --cov-report=html tests
 
 precommit: # run pre-commit hooks
 	@echo "🚀 Running pre-commit hooks"
@@ -15,10 +15,10 @@ precommit: # run pre-commit hooks
 check: # run code quality tools
 	@echo "🚀 Checking code quality"
 	@uv lock --locked
-	@uv run pre-commit run -a
 	@uv run mypy .
 	@uv run ruff check .
 	@uv run deptry .
+	@uv run isort .
 
 clean: # clean up
 	@echo "🚀 Cleaning up"
