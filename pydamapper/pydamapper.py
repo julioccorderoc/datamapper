@@ -1,5 +1,5 @@
 """
-datamapper.py
+pydamapper.py
 ==============
 
 
@@ -23,7 +23,7 @@ from .src.types import DataMapped, ModelType, DataMapperReturnType, MappedModelI
 # TODO: add report of coverage of the source data in % in the cache
 
 
-class DataMapper:
+class PyDaMapper:
     """
     Maps data between Pydantic models
     """
@@ -224,5 +224,5 @@ class DataMapper:
         return result
 
 
-datamapper: DataMapper = DataMapper()
-map_models = datamapper.map_models
+pymapper: PyDaMapper = PyDaMapper()
+map_models = pymapper.map_models
