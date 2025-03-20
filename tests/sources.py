@@ -48,12 +48,8 @@ address = Address(
 )
 
 # Mock Checkout Items
-checkout1 = Checkout(
-    extra_item_id=301, extra_item_name="Gift Wrap", extra_item_price=5.0
-)
-checkout2 = Checkout(
-    extra_item_id=302, extra_item_name="Rush Delivery", extra_item_price=10.0
-)
+checkout1 = Checkout(extra_item_id=301, extra_item_name="Gift Wrap", extra_item_price=5.0)
+checkout2 = Checkout(extra_item_id=302, extra_item_name="Rush Delivery", extra_item_price=10.0)
 
 # Mock Webhook
 webhook = Webhook(webhook_id=401, webhook_name="OrderCreated")
