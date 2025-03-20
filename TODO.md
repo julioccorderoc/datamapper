@@ -69,3 +69,5 @@
 - [ ] Would be better to "flat" the source model before matching?
 - [ ] Would be better to "flat" the target model before building?
 - [x] Would be better to return a pure dict instead of a dict of pydantic models for the partial return? **(handled by serialize)**
+- [ ] Refactor ErrorList to it's own module and inherit from UserDict or UserList
+- [ ] Develop the enhance traverse module (using the visitor pattern)
