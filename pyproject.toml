@@ -1,5 +1,5 @@
 [project]
-name = "modelmappy"
+name = "pydamapper"
 version = "0.1.0"
 description = "Map data between pydantic models"
 authors = [
@@ -33,9 +33,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/julioccorderoc/datamapper"
-Issues = "https://github.com/julioccorderoc/datamapper/issues"
-Source = "https://github.com/julioccorderoc/datamapper"
+Homepage = "https://github.com/julioccorderoc/pydamapper"
+Issues = "https://github.com/julioccorderoc/pydamapper/issues"
+Source = "https://github.com/julioccorderoc/pydamapper"
 
 [build-system]
 requires = ["hatchling"]
