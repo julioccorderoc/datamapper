@@ -1,9 +1,9 @@
 import pytest
 from pydantic import BaseModel
 
-from datamapper import DataMapper, map_models
-from datamapper.src.error_manager import ErrorType
-from datamapper.src.types import ModelType, DataMapped
+from pydamapper import DataMapper, map_models
+from pydamapper.src.error_manager import ErrorType
+from pydamapper.src.types import ModelType, DataMapped
 
 from .sources import source_data, address
 
