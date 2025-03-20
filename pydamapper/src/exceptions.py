@@ -2,13 +2,13 @@
 exceptions.py
 =============
 
-This module defines custom exceptions used within the datamapper package.
+This module defines custom exceptions used within the pydamapper package.
 
 """
 
 
 class DataMapperException(Exception):
-    """Base class for all exceptions raised by datamapper"""
+    """Base class for all exceptions raised by pydamapper"""
 
 
 class MappingError(DataMapperException):

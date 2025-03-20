@@ -39,8 +39,8 @@ class ContextualFormatter(logging.Formatter):
 
 
 def configure_logger() -> logging.Logger:
-    """Configure datamapper logger with environment-aware settings"""
-    logger = logging.getLogger("datamapper")
+    """Configure pydamapper logger with environment-aware settings"""
+    logger = logging.getLogger("pydamapper")
     logger.setLevel(logging.DEBUG)  # Base level for all handlers
     logger.propagate = False  # Prevent root logger interference
 

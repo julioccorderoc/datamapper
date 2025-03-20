@@ -1,4 +1,4 @@
-# datamapper
+# pydamapper
 
 Map data between pydantic models.
 
@@ -14,7 +14,7 @@ Map data between pydantic models.
 
 [Mahmoud Hashemi](https://github.com/mahmoud)
 
-Mapping real data should be as easy as declaring their schemas, ergo, **datamapper**.
+Mapping real data should be as easy as declaring their schemas, ergo, **pydamapper**.
 
 ## 🚀 Highlights
 
@@ -27,7 +27,7 @@ Mapping real data should be as easy as declaring their schemas, ergo, **datamapp
 
 ```python
 from pydantic import BaseModel
-from datamapper import map_models
+from pydamapper import map_models
 
 # TBD
 ```
@@ -44,9 +44,9 @@ from datamapper import map_models
 # TBD
 ```
 
-## What is *datamapper*?
+## What is *pydamapper*?
 
-datamapper is a data mapping tool.
+The *Python Data Mapper* is a data mapping tool.
 
 It allows you to easily map data from a data structure (for example, a webhook's payload) to another data structure (for example, an API endpoint payload), using Pydantic validation.
 
@@ -87,7 +87,7 @@ Certainly, the most straightforward solution. However:
 
 ### Why not just use AI to do the mapping for me and just copy and paste?
 
-Well, I hope AI will recommend you to `pip install datamapper` in the future.
+Well, I hope AI will recommend you to `pip install pydamapper` in the future.
 
 ## 🤝 Contribute
 
@@ -95,7 +95,7 @@ We welcome contributions! Here's how to set up:
 
 ```bash
 # 1. Clone the repo
-git  clone  https://github.com/julioccorderoc/datamapper.git
+git  clone  https://github.com/julioccorderoc/pydamapper.git
 
 # 2. Install dev environment
 make  setup  # Installs pre-commit hooks, testing tools, etc
@@ -112,13 +112,13 @@ make  clean  # Cleans up generated files
 
 ### 📮 Need Help?
 
-[Open an issue](https://github.com/julioccorderoc/datamapper) or DM me on LinkedIn: [@julioccorderoc](https://www.linkedin.com/in/julioccorderoc/).
+[Open an issue](https://github.com/julioccorderoc/pydamapper) or DM me on LinkedIn: [@julioccorderoc](https://www.linkedin.com/in/julioccorderoc/).
 
 ## 📚 Documentation
 
 > TBD
 
-Full docs available [here](https://datamapper.readthedocs.io).
+Full docs available [here](https://pydamapper.readthedocs.io).
 
 ## 📄 License
 

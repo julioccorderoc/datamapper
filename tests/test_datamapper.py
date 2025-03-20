@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
-from pydamapper import DataMapper, map_models
+from pydamapper import PyDaMapper, map_models
 from pydamapper.src.error_manager import ErrorType
 from pydamapper.src.types import ModelType, DataMapped
 
@@ -95,7 +95,7 @@ class TestErrorCases:
         """Tests handling when a target field doesn't exist in the source."""
         # Should return a dict since it can't fully build the model
         required_field_error = ErrorType.REQUIRED_FIELD
-        mapper = DataMapper()
+        mapper = PyDaMapper()
         result = mapper.map_models(address, MissingFieldAddress)
         assert isinstance(result, dict)
         assert required_field_error in mapper.error_manager.errors
@@ -105,7 +105,7 @@ class TestErrorCases:
         """Tests handling when a field exists but has an incompatible type."""
         # Should return a dict with the fields it could map
         validation_error = ErrorType.VALIDATION
-        mapper = DataMapper()
+        mapper = PyDaMapper()
         result = mapper.map_models(address, TypeErrorAddress)
         assert isinstance(result, dict)
         assert validation_error in mapper.error_manager.errors
@@ -113,11 +113,11 @@ class TestErrorCases:
 
     # def test_new_model_empty(self):
     #     """Tests handling when a new model is empty."""
-    #     mapper = datamapper()
+    #     mapper = pydamapper()
 
     # def test_no_mappable_data(self):
     #     """Tests handling when no mappable data is found."""
-    #     mapper = datamapper()
+    #     mapper = pydamapper()
 
 
 class TestPartialReturns:
@@ -138,7 +138,7 @@ class TestPartialReturns:
         Tests different partial return situations with a single test function.
         """
         partial_return = ErrorType.PARTIAL_RETURN
-        mapper = DataMapper()
+        mapper = PyDaMapper()
         result = mapper.map_models(source, target)
 
         # Verify the result is a dict (partial mapping)
