@@ -6,18 +6,20 @@ pydamapper.py
 
 """
 
-from typing import Optional, Sequence, Union, Any
+from typing import Any, Optional, Sequence, Union
+
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from .src.path_manager import path_manager
-from .src.meta_field import FieldMetaData, get_field_meta_data
 from .src.error_manager import ErrorList, error_manager
+from .src.exceptions import InvalidArguments, NoMappableData
 from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
-from .src.exceptions import NoMappableData, InvalidArguments
+from .src.meta_field import FieldMetaData, get_field_meta_data
+from .src.path_manager import path_manager
+from .src.types import (DataMapped, MappedModelItem, ModelType,
+                        PyDaMapperReturnType)
 from .src.utils import partial_return
-from .src.types import DataMapped, ModelType, PyDaMapperReturnType, MappedModelItem
 
 # TODO: add get_origin for precise validation
 # TODO: add report of coverage of the source data in % in the cache

@@ -16,11 +16,12 @@ Classes:
 
 """
 
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, List, DefaultDict, Any
-from collections import defaultdict
-from pydantic import ValidationError, ConfigDict, create_model
+from typing import Any, DefaultDict, Iterable, List, Optional
+
+from pydantic import ConfigDict, ValidationError, create_model
 
 from .path_manager import DynamicPathManager, path_manager
 

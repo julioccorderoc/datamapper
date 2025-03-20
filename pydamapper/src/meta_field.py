@@ -6,12 +6,13 @@ This module provides functionality for analyzing and
 storing metadata about Pydantic model fields.
 """
 
-from dataclasses import dataclass, asdict
-from typing import Type, Optional, Union, get_origin, get_args, Any
+from dataclasses import asdict, dataclass
+from typing import Any, Optional, Type, Union, get_args, get_origin
+
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-from .types import ModelType, CollectionTypes
+from .types import CollectionTypes, ModelType
 
 
 @dataclass

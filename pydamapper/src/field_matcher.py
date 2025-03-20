@@ -4,15 +4,15 @@ field_matcher.py
 
 """
 
-from typing import List, Optional, Iterable, Any
+from typing import Any, Iterable, List, Optional
+
 from pydantic import BaseModel
 
-
-from .field_cache import matched_fields_cache
-from .path_manager import path_manager
 from .error_manager import error_manager
+from .field_cache import matched_fields_cache
 from .meta_field import FieldMetaData, get_field_meta_data
-from .types import NewModelHandler, MappedModelItem
+from .path_manager import path_manager
+from .types import MappedModelItem, NewModelHandler
 
 
 class FieldMatcher:

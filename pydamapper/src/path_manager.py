@@ -8,11 +8,10 @@ dynamic path tracking during data mapping operations.
 """
 
 from contextlib import contextmanager
-from typing import Tuple, Generator, cast
+from typing import Generator, Tuple, cast
 
-from .logger_config import logger
-from .exceptions import UnknownPathTypeException, InvalidPathSegmentError
-from .types import PathRegistryType, PathEntryType
+from .exceptions import InvalidPathSegmentError, UnknownPathTypeException
+from .types import PathEntryType, PathRegistryType
 
 
 class DynamicPathManager:
@@ -42,7 +41,6 @@ class DynamicPathManager:
             ...     ("intermediate", "ProcessModel")
             ... )
         """
-        self._logger = logger
         self._path_registry: PathRegistryType = {}
         for path_type, model_name in path_configs:
             self.create_path_type(path_type, model_name)
@@ -56,7 +54,7 @@ class DynamicPathManager:
             model_name: Associated model name for path formatting
         """
         if self._is_valid_path(path_identifier):
-            self._logger.warning("Path type '%s' already exists.", path_identifier)
+            print(f"Path type '{path_identifier}' already exists.")
             return
 
         self._path_registry[path_identifier] = {"model": model_name, "segments": []}

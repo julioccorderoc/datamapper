@@ -10,9 +10,9 @@ Python's standard typing module and Pydantic's BaseModel.
 
 """
 
-from typing import Type, Callable, Union, Dict, List, Set, Tuple, Any
-from pydantic import BaseModel
+from typing import Any, Callable, Dict, List, Set, Tuple, Type, Union
 
+from pydantic import BaseModel
 
 CollectionTypes = (list, set, tuple, List, Set, Tuple)
 """

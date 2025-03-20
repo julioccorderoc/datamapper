@@ -7,8 +7,9 @@ It includes functions to convert Pydantic models to JSON strings and to optional
 
 """
 
-from typing import Union, Any
 from json import dumps
+from typing import Any, Union
+
 from pydantic import BaseModel
 
 from .types import DataMapped
