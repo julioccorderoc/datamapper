@@ -152,7 +152,7 @@ class FieldMatcher:
                 with self._path_manager.track_segment("source", field):
                     self._search_instances(getattr(value, field), meta_data, instances)
 
-        elif isinstance(value, (list, tuple)):
+        elif isinstance(value, (list, tuple, set)):
             for index, item in enumerate(value):  # TODO: just fields that haven't been checked
                 with self._path_manager.track_segment("source", f"[{index}]"):
                     with self._path_manager.track_segment("target", f"[{index}]"):

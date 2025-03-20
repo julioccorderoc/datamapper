@@ -190,7 +190,6 @@ class DataMapper:
             - Support both list and tuple return types
             - Enable lazy evaluation patterns
         """
-
         # Try to find direct instances first
         list_of_models = self._field_matcher.find_model_instances(source, field_meta_data)
         if list_of_models:

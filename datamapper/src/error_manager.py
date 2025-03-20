@@ -18,7 +18,7 @@ Classes:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Any, List, DefaultDict
+from typing import Iterable, Optional, List, DefaultDict, Any
 from collections import defaultdict
 from pydantic import ValidationError, ConfigDict, create_model
 
