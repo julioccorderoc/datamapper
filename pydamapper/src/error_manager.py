@@ -246,14 +246,16 @@ class ErrorManager:
         )
         self.error_list.add(ErrorType.REQUIRED_FIELD, new_error)
 
-    def validate_type(
+    def is_valid_type(
         self, target_path: str, target_type: type, source_value: Any, source_type: type
-    ) -> None:
+    ) -> bool:
         """Validates if the source value can be coerced to the target type."""
-        if self.is_valid_type(source_value, target_type):
-            return
+        is_valid: bool = self._can_be_assigned(source_value, target_type)
+        if is_valid:
+            return True
 
         self.add_validation_error(target_path, target_type, str(source_value), source_type)
+        return False
 
     def new_model_partial(self, new_model_name: str) -> None:
         """Adds an error indicating that a new model was partially built."""
@@ -308,7 +310,7 @@ class ErrorManager:
         )
         self.error_list.add(ErrorType.VALIDATION, new_error)
 
-    def is_valid_type(self, source_value: Any, target_type: type, strict: bool = False) -> bool:
+    def _can_be_assigned(self, source_value: Any, target_type: type, strict: bool = False) -> bool:
         """Checks if a value can be coerced to a type."""
 
         TempModel = create_model(
