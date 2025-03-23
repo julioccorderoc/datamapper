@@ -8,11 +8,11 @@ from typing import Any, Iterable, List, Optional
 
 from pydantic import BaseModel
 
-from .error_manager import error_manager
-from .field_cache import matched_fields_cache
-from .meta_field import FieldMetaData, get_field_meta_data
-from .path_manager import path_manager
-from .types import MappedModelItem, NewModelHandler
+from pydamapper.src.error_manager import error_manager
+from pydamapper.src.field_cache import matched_fields_cache
+from pydamapper.src.meta_field import FieldMetaData, get_field_meta_data
+from pydamapper.src.path_manager import path_manager
+from pydamapper.src.types import MappedModelItem, NewModelHandler
 
 
 class FieldMatcher:

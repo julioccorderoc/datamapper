@@ -12,7 +12,7 @@ from typing import Any, Optional, Type, Union, get_args, get_origin
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-from .types import CollectionTypes, ModelType
+from pydamapper.src.types import CollectionTypes, ModelType
 
 
 @dataclass

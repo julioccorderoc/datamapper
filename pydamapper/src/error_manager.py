@@ -2,18 +2,8 @@
 error_manager.py
 ================
 
-This module provides functionality for managing and formatting errors during the data mapping process.
-It includes classes for tracking errors, formatting error messages, and managing error states.
-
-Classes:
---------
-- `ErrorType`: Enumeration of possible mapping errors.
-- `ErrorDetails`: Data class representing the details of an error.
-- `ErrorList`: Manages a list of errors with methods to add, remove, and query errors.
-- `ErrorFormatter`: Provides static methods to format error data into structured reports.
-- `ErrorManager`: Manages errors during the data mapping process, providing methods to log,
-  format, and handle various error types.
-
+Provides functionality for managing errors.
+Takes care of tracking, formatting, and managing error states.
 """
 
 from collections import defaultdict
@@ -23,7 +13,7 @@ from typing import Any, DefaultDict, Iterable, List, Optional
 
 from pydantic import ConfigDict, ValidationError, create_model
 
-from .path_manager import DynamicPathManager, path_manager
+from pydamapper.src.path_manager import DynamicPathManager, path_manager
 
 
 class ErrorType(Enum):

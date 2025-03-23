@@ -2,7 +2,7 @@
 exceptions.py
 =============
 
-This module defines custom exceptions used within the pydamapper package.
+Defines custom exceptions used within the pydamapper package.
 
 """
 

@@ -12,7 +12,7 @@ from typing import Any, Union
 
 from pydantic import BaseModel
 
-from .types import DataMapped
+from pydamapper.src.types import DataMapped
 
 
 def _serializer(object: Any) -> Union[DataMapped, str]:
