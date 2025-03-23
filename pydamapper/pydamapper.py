@@ -17,12 +17,10 @@ from .src.field_cache import FieldCache
 from .src.field_matcher import FieldMatcher
 from .src.meta_field import FieldMetaData, get_field_meta_data
 from .src.path_manager import path_manager
-from .src.types import (DataMapped, MappedModelItem, ModelType,
-                        PyDaMapperReturnType)
+from .src.types import DataMapped, MappedModelItem, ModelType, PyDaMapperReturnType
 from .src.utils import partial_return
 
 # TODO: add get_origin for precise validation
-# TODO: add report of coverage of the source data in % in the cache
 
 
 class PyDaMapper:
@@ -82,9 +80,11 @@ class PyDaMapper:
         """
         Maps source model instance to target model type
         """
-        if not isinstance(source, BaseModel):
-            raise InvalidArguments(source.__class__.__name__)
-        elif not issubclass(target, BaseModel):
+        if (
+            not isinstance(source, BaseModel)
+            or not isinstance(target, type)
+            or not issubclass(target, BaseModel)
+        ):
             raise InvalidArguments(source.__class__.__name__)
 
         self._start(source, target)
