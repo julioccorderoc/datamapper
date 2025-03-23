@@ -64,6 +64,7 @@ class FieldMatcher:
         if not hasattr(model, field_name):
             return None
 
+        # TODO: check this logic, there might be an issue with non required fields
         value = getattr(model, field_name)
         if value is None:
             return None  # TODO: Decide policy for None values - propagate or consider not found?
@@ -72,9 +73,9 @@ class FieldMatcher:
             source_path = self._path_manager.get_path("source")
             if self._cache.is_cached(source_path):
                 return None
-
-            self._validate_and_cache(value, meta_data)
-            return value
+            if self._is_valid_type(value, meta_data):
+                return value
+            return None
 
     def _traverse_nested_structures(self, model: BaseModel, meta_data: FieldMetaData) -> Any:
         """Coordinate search through nested models and collections."""
@@ -109,12 +110,13 @@ class FieldMatcher:
                     return result
         return None
 
-    def _validate_and_cache(
+    def _is_valid_type(
         self, value: Any, meta_data: FieldMetaData, is_instance: bool = False
-    ) -> None:
+    ) -> bool:
         """Centralize validation and caching logic."""
         source_path = self._path_manager.get_path("source")
         target_path = self._path_manager.get_path("target")
+        is_valid: bool
 
         # This is for the building lists of existing models
         # The target_type will be a collection but we want
@@ -124,8 +126,13 @@ class FieldMatcher:
         else:
             type_to_validate = meta_data.field_type
 
-        self._error_manager.validate_type(target_path, type_to_validate, value, type(value))
+        # If not valid, it won't be mapped. It might be useful to return the value
+        # but it has to be considered, depends on the use case
+        is_valid = self._error_manager.is_valid_type(
+            target_path, type_to_validate, value, type(value)
+        )
         self._cache.add(source_path)
+        return is_valid
 
     def find_model_instances(self, source: BaseModel, meta_data: FieldMetaData) -> List[BaseModel]:
         """Finds all instances of a specific model type in source data"""
@@ -144,8 +151,8 @@ class FieldMatcher:
         #     return
 
         if isinstance(value, meta_data.model_type):
-            self._validate_and_cache(value, meta_data, True)
-            instances.append(value)
+            if self._is_valid_type(value, meta_data, True):
+                instances.append(value)
 
         elif isinstance(value, BaseModel):
             for field in value.model_fields:  # TODO: just fields that haven't been checked

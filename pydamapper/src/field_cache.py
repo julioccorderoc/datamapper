@@ -11,6 +11,7 @@ from typing import Set
 
 
 # TODO: save key-value pairs displaying the matches
+# TODO: add report of coverage of the source data in % in the cache
 class FieldCache:
     """
     Manages path tracking to prevent reusing the same source fields during mapping.
