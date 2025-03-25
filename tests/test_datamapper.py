@@ -66,8 +66,8 @@ class TestErrorCases:
         mapper = PyDaMapper()
         result = mapper.map_models(dummy.address, models.MissingFieldCase)
         assert isinstance(result, dict)
-        assert required_field_error in mapper.error_manager.errors
-        assert len(mapper.error_manager.errors) == 1
+        assert required_field_error in mapper.errors
+        assert len(mapper.errors) == 1
         assert result == dummy.expected_missing_field
 
     def test_field_found_with_different_type(self) -> None:
@@ -76,8 +76,8 @@ class TestErrorCases:
         mapper = PyDaMapper()
         result = mapper.map_models(dummy.address, models.TypeErrorCase)
         assert isinstance(result, dict)
-        assert validation_error in mapper.error_manager.errors
-        assert len(mapper.error_manager.errors) == 2
+        assert validation_error in mapper.errors
+        assert len(mapper.errors) == 2
         assert result == dummy.expected_type_mismatch
 
     def test_new_model_empty(self):
@@ -86,8 +86,8 @@ class TestErrorCases:
         mapper = PyDaMapper()
         result = mapper.map_models(dummy.newproduct1, models.Product)
         assert isinstance(result, dict)
-        assert empty_model_error in mapper.error_manager.errors
-        assert len(mapper.error_manager.errors) == 2
+        assert empty_model_error in mapper.errors
+        assert len(mapper.errors) == 2
         assert result == dummy.expected_empty_new_model
 
     def test_no_mappable_data(self):
@@ -104,6 +104,9 @@ class TestErrorCases:
         """Tests handling when an invalid target argument is passed."""
         with pytest.raises(InvalidArguments):
             map_models(dummy.address, dummy.address)
+
+    # def test_reach_limit_list_of_new_models(self):
+    #     """Tests handling when the limit of new models is reached."""
 
 
 class TestPartialReturns:
