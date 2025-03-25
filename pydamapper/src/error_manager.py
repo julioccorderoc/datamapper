@@ -65,14 +65,14 @@ class ErrorManager:
             error_type=ErrorType.REQUIRED_FIELD,
             details=error_message,
         )
-        self.error_registry.add(ErrorType.REQUIRED_FIELD, new_error)
+        self.error_registry.add(new_error)
 
     def is_valid_type(
         self, target_path: str, target_type: type, source_value: Any, source_type: type
     ) -> bool:
         """Validates if the source value can be coerced to the target type."""
-        is_valid: bool = self._can_be_assigned(source_value, target_type)
-        if is_valid:
+        can_be_assigned: bool = self._can_be_assigned(source_value, target_type)
+        if can_be_assigned:
             return True
 
         self.add_validation_error(target_path, target_type, str(source_value), source_type)
@@ -87,7 +87,7 @@ class ErrorManager:
             error_type=ErrorType.PARTIAL_RETURN,
             details=error_message,
         )
-        self.error_registry.add(ErrorType.PARTIAL_RETURN, new_error)
+        self.error_registry.add(new_error)
 
     def new_model_empty(self, new_model_name: str) -> None:
         """Adds an error indicating that no data was found to build a new model."""
@@ -99,8 +99,8 @@ class ErrorManager:
             details=error_message,
         )
         # If there's not data, I have to remove the required field error to avoid redundancy
-        self.error_registry.remove(ErrorType.REQUIRED_FIELD)
-        self.error_registry.add(ErrorType.EMPTY_MODEL, new_error)
+        self.error_registry.remove(ErrorType.REQUIRED_FIELD, just_children=True)
+        self.error_registry.add(new_error)
 
     def reach_limit_iter(self, limit: int, model_name: str) -> None:
         """Adds an error indicating that the limit of new models was reached."""
@@ -111,7 +111,7 @@ class ErrorManager:
             error_type=ErrorType.LIMIT_REACH,
             details=error_message,
         )
-        self.error_registry.add(ErrorType.LIMIT_REACH, new_error)
+        self.error_registry.add(new_error)
 
     def last_available_index(self) -> None:
         """Removes the empty model error created after the last available index."""
@@ -133,7 +133,7 @@ class ErrorManager:
             error_type=ErrorType.VALIDATION,
             details=error_message,
         )
-        self.error_registry.add(ErrorType.VALIDATION, new_error)
+        self.error_registry.add(new_error)
 
     def _can_be_assigned(self, source_value: Any, target_type: type, strict: bool = False) -> bool:
         """Checks if a value can be coerced to a type."""
