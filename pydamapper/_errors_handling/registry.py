@@ -45,7 +45,7 @@ class ErrorRegistry:
         """Returns a list of all error details lists for each error type."""
         return list(self.errors.values())
 
-    def add(self, error_type: ErrorType, error_details: ErrorDetails) -> None:
+    def add(self, error_details: ErrorDetails) -> None:
         """
         Adds a mapping error to the error list with context.
 
@@ -53,53 +53,41 @@ class ErrorRegistry:
             error_type (ErrorType): The type of error to add.
             error_details (ErrorDetails): The details of the error.
         """
-        self.errors[error_type].append(error_details)
+        self.errors[error_details.error_type].append(error_details)
 
-    def remove(self, error_type: ErrorType) -> None:
+    def remove(
+        self,
+        error_type: ErrorType,
+        just_children: bool = False,
+    ) -> None:
         """
-        Removes mapping errors of the specified type that match the current path context.
-        For nested model errors (REQUIRED_FIELD), removes errors in child paths.
-        For other error types, removes only exact path matches.
+        Removes errors matching current path context with option to include child paths.
 
         Args:
-            error_type (ErrorType): The type of error to remove.
+            error_type: Type of error to remove
+            just_children: When True, removes errors in child paths (default: False)
         """
-        field_path = self._path_manager.get_path("target")
-        error_list = self.errors[error_type]  # Direct access to target type's list
+        current_path = self._path_manager.get_path("target")
 
-        original_count = len(error_list)
-        if original_count == 0:
+        if not self.errors[error_type]:
             return
 
-        # Apply path-based filtering to the specific error type's list
-        filtered_errors = [
-            error for error in error_list if self._should_keep_error(error, error_type, field_path)
-        ]
+        original_errors = self.errors[error_type]
+        kept_errors = []
+        for error in original_errors:
+            if not self._is_error_match(error, current_path, just_children):
+                kept_errors.append(error)
 
-        removed_count = original_count - len(filtered_errors)
-        if removed_count > 0:
-            if filtered_errors:  # If there are still errors left, update the list
-                self.errors[error_type] = filtered_errors
-            else:  # If no errors are left, remove the key entirely
-                del self.errors[error_type]
+        self.errors[error_type] = kept_errors
 
-    def _should_keep_error(
-        self, error_details: ErrorDetails, target_type: ErrorType, current_path: str
-    ) -> bool:
-        """
-        Path-based retention criteria for a known error type.
+    @staticmethod
+    def _is_error_match(error: ErrorDetails, current_path: str, just_children: bool) -> bool:
+        """Helper function to check if an error matches the current path context."""
+        error_path = error.field_path
 
-        Args:
-            error: The error to evaluate
-            target_type: Error type to match for removal
-            current_path: Field path context for removal criteria
-
-        Returns:
-            True if the error should be kept, False if it should be removed
-        """
-        if target_type == ErrorType.REQUIRED_FIELD:
-            return not error_details.field_path.startswith(current_path)
-        return error_details.field_path != current_path
+        if just_children:
+            return error_path.startswith(current_path)
+        return error_path == current_path
 
     def clear(self) -> None:
         """Clears all errors from the error list."""
