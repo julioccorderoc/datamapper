@@ -178,8 +178,10 @@ class FieldMatcher:
 
         while index <= self._max_iter_list_new_model:
             if index == self._max_iter_list_new_model:
-                # TODO: handle this with error manager
-                pass
+                self._error_manager.reach_limit_iter(
+                    self._max_iter_list_new_model, field_meta_data.field_name
+                )
+                break
 
             with self._path_manager.track_segment("target", f"[{index}]"):
                 model = handle_new_model(
