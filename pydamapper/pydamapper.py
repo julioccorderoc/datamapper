@@ -11,16 +11,15 @@ from typing import Any, Optional, Sequence, Union
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from .src.error_manager import ErrorList, error_manager
-from .src.exceptions import InvalidArguments, NoMappableData
-from .src.field_cache import FieldCache
-from .src.field_matcher import FieldMatcher
-from .src.meta_field import FieldMetaData, get_field_meta_data
-from .src.path_manager import path_manager
-from .src.types import DataMapped, MappedModelItem, ModelType, PyDaMapperReturnType
-from .src.utils import partial_return
-
-# TODO: add get_origin for precise validation
+from pydamapper.src.error_manager import error_manager
+from pydamapper.src.exceptions import InvalidArguments, NoMappableData
+from pydamapper.src.field_cache import FieldCache
+from pydamapper.src.field_matcher import FieldMatcher
+from pydamapper.src.meta_field import FieldMetaData, get_field_meta_data
+from pydamapper.src.path_manager import path_manager
+from pydamapper.src.types import DataMapped, MappedModelItem, ModelType, PyDaMapperReturnType
+from pydamapper.src.utils import partial_return
+from pydamapper._errors_handling.registry import ErrorRegistry
 
 
 class PyDaMapper:
@@ -42,7 +41,7 @@ class PyDaMapper:
         self._field_matcher = FieldMatcher(self._max_iter_list_new_model)
 
     @property
-    def errors(self) -> ErrorList:
+    def errors(self) -> ErrorRegistry:
         return self.error_manager.errors
 
     @property
