@@ -11,15 +11,15 @@ from typing import Any, Optional, Sequence, Union
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
 
-from pydamapper.src.error_manager import error_manager
-from pydamapper.src.exceptions import InvalidArguments, NoMappableData
+from pydamapper.src.error_handling.manager import error_manager
+from pydamapper.src.error_handling.exceptions import InvalidArguments, NoMappableData
 from pydamapper.src.field_cache import FieldCache
 from pydamapper.src.field_matcher import FieldMatcher
 from pydamapper.src.meta_field import FieldMetaData, get_field_meta_data
 from pydamapper.src.path_manager import path_manager
 from pydamapper.src.types import DataMapped, MappedModelItem, ModelType, PyDaMapperReturnType
 from pydamapper.src.utils import partial_return
-from pydamapper._errors_handling.registry import ErrorRegistry
+from pydamapper.src.error_handling.registry import ErrorRegistry
 
 
 class PyDaMapper:
@@ -215,8 +215,8 @@ class PyDaMapper:
             raise NoMappableData(self._source_name, self._target_name)
 
         # Handle errors if any
-        if self.error_manager.has_errors():
-            self.error_manager.display(self._target_name)
+        if len(self.errors) > 0:
+            print(str(self.error_manager))
             return partial_return(mapped_data, self._serialize)
 
         # TODO: check for alias mismatches
