@@ -10,7 +10,10 @@ dynamic path tracking during data mapping operations.
 from contextlib import contextmanager
 from typing import Generator, Tuple, cast
 
-from pydamapper.src.exceptions import InvalidPathSegmentError, UnknownPathTypeException
+from pydamapper.src.error_handling.exceptions import (
+    InvalidPathSegmentError,
+    UnknownPathTypeException,
+)
 from pydamapper.src.types import PathEntryType, PathRegistryType
 
 

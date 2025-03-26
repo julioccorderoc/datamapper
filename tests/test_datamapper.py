@@ -2,9 +2,9 @@ import pytest
 from pydantic import BaseModel
 
 from pydamapper import PyDaMapper, map_models
-from pydamapper.src.error_manager import ErrorType
+from pydamapper.src.error_handling.manager import ErrorType
 from pydamapper.src.types import ModelType, DataMapped
-from pydamapper.src.exceptions import NoMappableData, InvalidArguments
+from pydamapper.src.error_handling.exceptions import NoMappableData, InvalidArguments
 from pydamapper.tutorial import models
 from pydamapper.tutorial import dummy_data as dummy
 

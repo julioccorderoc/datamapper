@@ -8,7 +8,7 @@ from typing import Any, Iterable, List, Optional
 
 from pydantic import BaseModel
 
-from pydamapper.src.error_manager import error_manager
+from pydamapper.src.error_handling.manager import error_manager
 from pydamapper.src.field_cache import matched_fields_cache
 from pydamapper.src.meta_field import FieldMetaData, get_field_meta_data
 from pydamapper.src.path_manager import path_manager
