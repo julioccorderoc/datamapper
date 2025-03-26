@@ -54,7 +54,7 @@ It was created with the purpose of facilitating integration between APIs, allowi
 
 ### Why?
 
-- **Lazyness**: integrating two simple APIs should be as easy as defining their schemas (or asking ChatGPT to do it for you).
+- **Lazyness**: integrating two simple APIs should be as easy as defining their schemas (or asking an LLM to do it for you).
 - **DRY**: Don't repeat yourself. If you have the model schema, why bother with something else?
 
 ### Other solutions?
@@ -118,8 +118,6 @@ make  clean  # Cleans up generated files
 
 > TBD
 
-Full docs available [here](https://pydamapper.readthedocs.io).
-
 ## 📄 License
 
 [MIT License](LICENSE) - Free for commercial use
@@ -127,7 +125,9 @@ Full docs available [here](https://pydamapper.readthedocs.io).
 ## Disclaimer
 
 - This package is still in development.
-- I created this package as a learning project, so be aware.
+
+> [!NOTE]
+> I created this package as a learning project.
 
 ## 🙌 Credits
 
