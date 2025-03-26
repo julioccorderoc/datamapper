@@ -8,19 +8,35 @@ Takes care of tracking, formatting, and managing error states.
 
 from typing import Any
 from pydantic import ConfigDict, ValidationError, create_model
+from string import Template
 
 from pydamapper.src.path_manager import DynamicPathManager, path_manager
-from pydamapper._errors_handling.messages import (
-    generate_summary,
-    generate_details,
-    field_required,
-    type_validation,
-    partial_model,
-    empty_model,
-    limit_reach,
+from pydamapper.src.error_handling.structures import ErrorDetails, ErrorType
+from pydamapper.src.error_handling.registry import ErrorRegistry
+
+
+# ----------------------------
+# Templates for error messages
+# ----------------------------
+
+field_required = Template(
+    "The field '$field_name' is required in the '$parent_model_name' model "
+    "and could not be matched in the '$source_model_name' model."
 )
-from pydamapper._errors_handling.structures import ErrorDetails, ErrorType
-from pydamapper._errors_handling.registry import ErrorRegistry
+
+type_validation = Template(
+    "The field '$field_name' of type '$field_type' cannot match "
+    "the value '$value' of type '$value_type'"
+)
+
+partial_model = Template("The new model '$new_model_name' was partially built.")
+
+empty_model = Template("No data found to build the new model '$new_model_name'.")
+
+limit_reach = Template(
+    "Limit of '$limit' reach for building list of '$new_model_name' models. "
+    "IF YOU WANT TO EXTEND THE LIMIT UPDATE THE CONFIG."
+)
 
 
 class ErrorManager:
@@ -34,22 +50,17 @@ class ErrorManager:
         self._path_manager = path_manager
         self.error_registry = ErrorRegistry(self._path_manager)
 
+    def __str__(self) -> str:
+        """Displays a summary and detailed report of the errors."""
+        errors_summary: str = str(self.error_registry)
+        disclaimer: str = "⚠️ Returning partially mapped data."
+        display: str = f"{errors_summary}\n{disclaimer}\n"
+        return display
+
     @property
     def errors(self) -> ErrorRegistry:
         """Returns the list of errors managed by this instance."""
         return self.error_registry
-
-    def has_errors(self) -> bool:
-        """Returns: True if there are errors, False otherwise."""
-        return len(self.error_registry) > 0
-
-    def display(self, target_model_name: str) -> None:
-        """Displays a summary and detailed report of the errors."""
-        summary = generate_summary(self.error_registry, target_model_name)
-        details = generate_details(self.error_registry)
-        disclaimer = "⚠️ Returning partially mapped data."
-        display = f"{summary}\n\n{details}\n\n{disclaimer}\n"
-        print(display)
 
     def required_field(self, source_model_name: str, parent_model_name: str) -> None:
         """Adds an error for a required field that is missing."""
@@ -65,7 +76,7 @@ class ErrorManager:
             error_type=ErrorType.REQUIRED_FIELD,
             details=error_message,
         )
-        self.error_registry.add(new_error)
+        self.errors.add(new_error)
 
     def is_valid_type(
         self, target_path: str, target_type: type, source_value: Any, source_type: type
@@ -87,7 +98,7 @@ class ErrorManager:
             error_type=ErrorType.PARTIAL_RETURN,
             details=error_message,
         )
-        self.error_registry.add(new_error)
+        self.errors.add(new_error)
 
     def new_model_empty(self, new_model_name: str) -> None:
         """Adds an error indicating that no data was found to build a new model."""
@@ -99,8 +110,8 @@ class ErrorManager:
             details=error_message,
         )
         # If there's not data, I have to remove the required field error to avoid redundancy
-        self.error_registry.remove(ErrorType.REQUIRED_FIELD, just_children=True)
-        self.error_registry.add(new_error)
+        self.errors.remove(ErrorType.REQUIRED_FIELD, just_children=True)
+        self.errors.add(new_error)
 
     def reach_limit_iter(self, limit: int, model_name: str) -> None:
         """Adds an error indicating that the limit of new models was reached."""
@@ -111,11 +122,11 @@ class ErrorManager:
             error_type=ErrorType.LIMIT_REACH,
             details=error_message,
         )
-        self.error_registry.add(new_error)
+        self.errors.add(new_error)
 
     def last_available_index(self) -> None:
         """Removes the empty model error created after the last available index."""
-        self.error_registry.remove(ErrorType.EMPTY_MODEL)
+        self.errors.remove(ErrorType.EMPTY_MODEL)
 
     def add_validation_error(
         self, field_path: str, target_type: type, source_value: str, source_type: type
@@ -133,7 +144,7 @@ class ErrorManager:
             error_type=ErrorType.VALIDATION,
             details=error_message,
         )
-        self.error_registry.add(new_error)
+        self.errors.add(new_error)
 
     def _can_be_assigned(self, source_value: Any, target_type: type, strict: bool = False) -> bool:
         """Checks if a value can be coerced to a type."""
